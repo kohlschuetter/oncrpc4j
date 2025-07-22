@@ -234,16 +234,6 @@ public interface Opaque {
     }
 
     /**
-     * Writes the bytes of this {@link Opaque} to the given {@link ByteBuffer}.
-     * 
-     * @param buf The target buffer.
-     */
-    default void putBytes(ByteBuffer buf, int offset, int count) {
-        byte[] bytes = toBytes();
-        buf.put(bytes, offset, count);
-    }
-
-    /**
      * Returns the hashCode based on the byte-representation of this instance.
      * <p>
      * This method must behave like {@link #defaultHashCode(Opaque)}, but may be optimized.
@@ -319,11 +309,6 @@ public interface Opaque {
         @Override
         public void putBytes(ByteBuffer buf) {
             buf.put(_opaque);
-        }
-
-        @Override
-        public void putBytes(ByteBuffer buf, int offset, int count) {
-            buf.put(_opaque, offset, count);
         }
 
         @Override
@@ -527,14 +512,7 @@ public interface Opaque {
 
         @Override
         public void putBytes(ByteBuffer out) {
-            // FIXME optimize this?
-            Opaque.super.putBytes(buf);
-        }
-
-        @Override
-        public void putBytes(ByteBuffer out, int offset, int count) {
-            // FIXME optimize this?
-            Opaque.super.putBytes(buf, offset, count);
+            out.put(out.slice(index, length));
         }
     }
 }
