@@ -695,17 +695,17 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      * the opaque value will be. The encoded data is always padded to be a multiple of four. If the length of the given
      * byte vector is not a multiple of four, zero bytes will be used for padding.
      */
-    @Override
-    public void xdrEncodeOpaque(Opaque bytes, int offset, int len) {
+    void xdrEncodeOpaque0(Opaque bytes, int len) {
         int padding = (4 - (len & 3)) & 3;
         ensureCapacity(len + padding);
-        _buffer.put(bytes.toBytes(), offset, len);
+        _buffer.put(bytes.toBytes(), 0, len);
         _buffer.put(paddingZeros, 0, padding);
     }
 
     @Override
-    public void xdrEncodeOpaque(Opaque bytes, int len) {
-        xdrEncodeOpaque(bytes, 0, len);
+    public void xdrEncodeOpaque(Opaque bytes, int expectedLength) {
+        // FIXME log if length is wrong?
+        xdrEncodeOpaque0(bytes, expectedLength);
     }
 
     /**
@@ -716,8 +716,9 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      */
     @Override
     public void xdrEncodeDynamicOpaque(Opaque opaque) {
-        xdrEncodeInt(opaque.numBytes());
-        xdrEncodeOpaque(opaque, 0, opaque.numBytes());
+        int numBytes = opaque.numBytes();
+        xdrEncodeInt(numBytes);
+        xdrEncodeOpaque0(opaque, numBytes);
     }
 
     @Override
