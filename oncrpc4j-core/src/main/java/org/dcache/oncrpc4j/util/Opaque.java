@@ -21,6 +21,7 @@ package org.dcache.oncrpc4j.util;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Objects;
@@ -34,6 +35,28 @@ import java.util.Objects;
  * {@link java.util.HashMap#computeIfAbsent(Object, java.util.function.Function)}, etc.
  */
 public interface Opaque {
+    static final Opaque EMPTY_OPAQUE = Opaque.forNZeroBytes(0);
+
+    /**
+     * Returns an {@link Opaque}, encoding the given String using UTF-8.
+     * 
+     * @param s The string.
+     * @return The Opaque.
+     */
+    static Opaque forUtf8Bytes(String s) {
+        return forImmutableBytes(s.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Returns a {@link Opaque} for a number of zero bytes.
+     * 
+     * @param num The number of zero bytes.
+     * @return The Opaque.
+     */
+    static Opaque forNZeroBytes(int num) {
+        return Opaque.forImmutableBytes(new byte[num]);
+    }
+
     /**
      * Returns an immutable {@link Opaque} instance based on a copy of the given bytes.
      * 
@@ -42,6 +65,19 @@ public interface Opaque {
      */
     static Opaque forBytes(byte[] bytes) {
         return new OpaqueImmutableImpl(bytes.clone());
+    }
+
+    /**
+     * Returns an {@link Opaque} instance based the given byte array <em>by reference</em>.
+     * <p>
+     * Note that this is assuming that the byte array does not change afterwards outside the scope of {@link Opaque}, it
+     * is assumed that the caller relinquishes ownership of the array.
+     * 
+     * @param bytes The bytes.
+     * @return The {@link Opaque} instance.
+     */
+    static Opaque forImmutableBytes(byte[] bytes) {
+        return new OpaqueImmutableImpl(bytes);
     }
 
     /**
@@ -194,6 +230,17 @@ public interface Opaque {
      */
     long longAt(int byteOffset);
 
+    /**
+     * Returns a {@link ByteBuffer} that is backed by the bytes of a section in this {@link Opaque}.
+     * 
+     * @param offset The byte offset in the opaque.
+     * @param length The number of bytes.
+     * @return The ByteBuffer.
+     */
+    default ByteBuffer asByteBuffer(int offset, int length) {
+        return ByteBuffer.wrap(toBytes(), offset, length);
+    }
+
     public class OpaqueImpl implements Opaque {
         final byte[] _opaque;
 
@@ -331,6 +378,15 @@ public interface Opaque {
             byte[] bytes = new byte[length];
             buf.get(index, bytes);
             return bytes;
+        }
+
+        @Override
+        public ByteBuffer asByteBuffer(int offset, int count) {
+            if (count > length) {
+                throw new IllegalArgumentException("Not enough bytes in backing buffer: " + count + " > " + length);
+            }
+
+            return buf.slice(index + offset, count);
         }
 
         @Override
