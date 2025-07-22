@@ -35,7 +35,7 @@ import java.util.Objects;
  * {@link java.util.HashMap#computeIfAbsent(Object, java.util.function.Function)}, etc.
  */
 public interface Opaque {
-    static final Opaque EMPTY_OPAQUE = Opaque.forNZeroBytes(0);
+    static final Opaque EMPTY_OPAQUE = new OpaqueImmutableImpl(new byte[0]);
 
     /**
      * Returns an {@link Opaque}, encoding the given String using UTF-8.
@@ -44,6 +44,9 @@ public interface Opaque {
      * @return The Opaque.
      */
     static Opaque forUtf8Bytes(String s) {
+        if (s.isEmpty()) {
+            return EMPTY_OPAQUE;
+        }
         return forImmutableBytes(s.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -64,6 +67,9 @@ public interface Opaque {
      * @return The {@link Opaque} instance.
      */
     static Opaque forBytes(byte[] bytes) {
+        if (bytes.length == 0) {
+            return EMPTY_OPAQUE;
+        }
         return new OpaqueImmutableImpl(bytes.clone());
     }
 
@@ -77,6 +83,9 @@ public interface Opaque {
      * @return The {@link Opaque} instance.
      */
     static Opaque forImmutableBytes(byte[] bytes) {
+        if (bytes.length == 0) {
+            return EMPTY_OPAQUE;
+        }
         return new OpaqueImmutableImpl(bytes);
     }
 
@@ -90,18 +99,24 @@ public interface Opaque {
      * @return The {@link Opaque} instance.
      */
     static Opaque forMutableByteArray(byte[] bytes) {
+        if (bytes.length == 0) {
+            return EMPTY_OPAQUE;
+        }
         return new OpaqueImpl(bytes);
     }
 
     /**
      * Returns an immutable {@link Opaque} instance based on a copy of the {@code length} bytes from the given
-     * {@link ByteBuffer}.
+     * {@link ByteBuffer}, starting at the current position for the remaining bytes.
      * 
      * @param buf The buffer.
      * @param length The number of bytes.
      * @return The {@link Opaque} instance.
      */
     static Opaque forBytes(ByteBuffer buf, int length) {
+        if (length == 0 || buf.remaining() == 0) {
+            return EMPTY_OPAQUE;
+        }
         byte[] bytes = new byte[length];
         buf.get(bytes);
 
@@ -112,6 +127,9 @@ public interface Opaque {
      * Returns a <em>mutable</em> {@link Opaque} instance backed on the byte contents of the given {@link ByteBuffer},
      * for the given number of bytes starting from the given absolute index.
      * <p>
+     * It is assumed that the given {@link ByteBuffer}'s contents are valid and unchanged for the entire lifetime of the
+     * returned {@link Opaque}; position and limit may be changed by the returned {@link Opaque}.
+     * <p>
      * Note that the returned {@link Opaque} is typically not suitable for <em>storing</em> in a
      * {@link java.util.HashMap}, but merely for lookups. Call {@link #toImmutableOpaque()} when necessary.
      * 
@@ -121,7 +139,7 @@ public interface Opaque {
      * @return The {@link Opaque} instance.
      * @see #toImmutableOpaque()
      */
-    static Opaque forMutableByteBuffer(ByteBuffer buf, int index, int length) {
+    static Opaque forImmutableByteBuffer(ByteBuffer buf, int index, int length) {
         if (buf.order() != ByteOrder.BIG_ENDIAN) {
             buf = buf.duplicate();
         }
@@ -192,6 +210,16 @@ public interface Opaque {
      */
     default void putBytes(ByteBuffer buf) {
         buf.put(toBytes());
+    }
+
+    /**
+     * Writes the bytes of this {@link Opaque} to the given {@link ByteBuffer}.
+     * 
+     * @param buf The target buffer.
+     */
+    default void putBytes(ByteBuffer buf, int offset, int count) {
+        byte[] bytes = toBytes();
+        buf.put(bytes, offset, count);
     }
 
     /**
@@ -270,6 +298,11 @@ public interface Opaque {
         @Override
         public void putBytes(ByteBuffer buf) {
             buf.put(_opaque);
+        }
+
+        @Override
+        public void putBytes(ByteBuffer buf, int offset, int count) {
+            buf.put(_opaque, offset, count);
         }
 
         @Override
@@ -469,6 +502,18 @@ public interface Opaque {
         @Override
         public long longAt(int byteOffset) {
             return buf.getLong(byteOffset);
+        }
+
+        @Override
+        public void putBytes(ByteBuffer out) {
+            // FIXME optimize this?
+            Opaque.super.putBytes(buf);
+        }
+
+        @Override
+        public void putBytes(ByteBuffer out, int offset, int count) {
+            // FIXME optimize this?
+            Opaque.super.putBytes(buf, offset, count);
         }
     }
 }
