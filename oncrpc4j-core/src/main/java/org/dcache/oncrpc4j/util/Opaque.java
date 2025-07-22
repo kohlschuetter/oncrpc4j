@@ -35,7 +35,28 @@ import java.util.Objects;
  * {@link java.util.HashMap#computeIfAbsent(Object, java.util.function.Function)}, etc.
  */
 public interface Opaque {
-    static final Opaque EMPTY_OPAQUE = new OpaqueImmutableImpl(new byte[0]);
+    static final Opaque EMPTY_OPAQUE = new OpaqueImpl(new byte[0]) {
+
+        @Override
+        public byte[] toBytes() {
+            return _opaque;
+        }
+
+        @Override
+        public int hashCode() {
+            return 1;
+        }
+
+        @Override
+        public String toBase64() {
+            return "";
+        }
+
+        @Override
+        public int numBytes() {
+            return 0;
+        }
+    };
 
     /**
      * Returns an {@link Opaque}, encoding the given String using UTF-8.
