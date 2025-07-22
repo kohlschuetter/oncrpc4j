@@ -317,8 +317,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      * @param len number of bytes to read.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
      */
-    @Override
-    public void xdrDecodeOpaque(byte[] buf, int offset, int len) throws BadXdrOncRpcException {
+    void xdrDecodeOpaque(byte[] buf, int offset, int len) throws BadXdrOncRpcException {
         if (len == 0) {
             return;
         }
@@ -328,7 +327,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         _buffer.position(_buffer.position() + padding);
     }
 
-    public void xdrDecodeOpaque(byte[] buf,  int len) throws BadXdrOncRpcException {
+    void xdrDecodeOpaque(byte[] buf,  int len) throws BadXdrOncRpcException {
         xdrDecodeOpaque(buf, 0, len);
     }
 
