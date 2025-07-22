@@ -20,7 +20,9 @@
 package org.dcache.oncrpc4j.rpc.gss;
 
 import java.io.IOException;
+
 import org.dcache.oncrpc4j.rpc.OncRpcException;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
@@ -30,12 +32,12 @@ import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
  */
 public class DataBodyPrivacy implements XdrAble {
 
-    byte[] _data;
+    Opaque _data;
 
     public DataBodyPrivacy() {
     }
 
-    public DataBodyPrivacy(byte[] data) {
+    public DataBodyPrivacy(Opaque data) {
         this._data = data;
     }
 
@@ -50,7 +52,7 @@ public class DataBodyPrivacy implements XdrAble {
         xdr.xdrEncodeDynamicOpaque(_data);
     }
 
-    public byte[] getData() {
+    public Opaque getData() {
         return _data;
     }
 }

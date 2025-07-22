@@ -1,10 +1,16 @@
 package org.dcache.oncrpc4j.xdr;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+
+import org.dcache.oncrpc4j.util.Opaque;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class XdrOpaqueTest {
 
@@ -21,14 +27,14 @@ public class XdrOpaqueTest {
 
             xdr.beginDecoding();
 
-            assertArrayEquals("invalid opaque value", opaque.getOpaque(), xdr.xdrDecodeDynamicOpaque());
+            assertEquals("invalid opaque value", opaque.getOpaque(), xdr.xdrDecodeDynamicOpaque());
         }
     }
 
     @Test
     public void testDecode() throws IOException {
 
-        byte[] value = "some bytes".getBytes(StandardCharsets.UTF_8);
+        Opaque value = Opaque.forUtf8Bytes("some bytes");
 
         try (Xdr xdr = new Xdr(128)) {
 
@@ -40,7 +46,7 @@ public class XdrOpaqueTest {
 
             XdrOpaque opaque = new XdrOpaque(xdr);
 
-            assertArrayEquals("invalid opaque value", value, opaque.getOpaque());
+            assertEquals("invalid opaque value", value, opaque.getOpaque());
         }
     }
 
@@ -96,7 +102,7 @@ public class XdrOpaqueTest {
 
             XdrOpaque opaque = new XdrOpaque(xdr);
             // the data part must match (e.g without size)
-            assertArrayEquals(Arrays.copyOfRange(data, 4, 12), opaque.getOpaque());
+            assertEquals(Opaque.forBytes(Arrays.copyOfRange(data, 4, 12)), opaque.getOpaque());
         }
     }
 
@@ -114,7 +120,7 @@ public class XdrOpaqueTest {
             XdrOpaque opaque = new XdrOpaque();
             opaque.xdrDecode(xdr);
             // the data part must match (e.g without size)
-            assertArrayEquals(Arrays.copyOfRange(data, 4, 12), opaque.getOpaque());
+            assertEquals(Opaque.forMutableByteArray(Arrays.copyOfRange(data, 4, 12)), opaque.getOpaque());
         }
     }
 

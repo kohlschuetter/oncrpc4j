@@ -19,25 +19,27 @@
  */
 package org.dcache.oncrpc4j.rpc.gss;
 
-import org.dcache.oncrpc4j.rpc.RpcAuthStat;
-import org.dcache.oncrpc4j.rpc.RpcCall;
+import java.io.IOException;
+
+import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.rpc.RpcAuthError;
 import org.dcache.oncrpc4j.rpc.RpcAuthException;
+import org.dcache.oncrpc4j.rpc.RpcAuthStat;
+import org.dcache.oncrpc4j.rpc.RpcCall;
 import org.dcache.oncrpc4j.rpc.RpcRejectStatus;
-import org.dcache.oncrpc4j.rpc.OncRpcException;
-import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.Xdr;
 import org.dcache.oncrpc4j.xdr.XdrAble;
-import java.io.IOException;
+import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
+import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.MessageProp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.ietf.jgss.GSSContext;
 
 /**
- * An extention of {@link RpcCall} which Wrap/Unwrap the data according GSS QOS.
- * The supported QOS are: NONE, INTEGRITY and PRIVACY as specified in rfs 2203.
+ * An extention of {@link RpcCall} which Wrap/Unwrap the data according GSS QOS. The supported QOS are: NONE, INTEGRITY
+ * and PRIVACY as specified in rfs 2203.
  *
  * @since 0.0.4
  */
@@ -67,8 +69,8 @@ public class RpcGssCall extends RpcCall {
                 case RpcGssService.RPC_GSS_SVC_INTEGRITY:
                     DataBodyIntegrity integData = new DataBodyIntegrity();
                     super.retrieveCall(integData);
-                    byte[] integBytes = integData.getData();
-                    byte[] checksum = integData.getChecksum();
+                    byte[] integBytes = integData.getData().toBytes();
+                    byte[] checksum = integData.getChecksum().toBytes();
                     _gssContext.verifyMIC(checksum, 0, checksum.length,
                             integBytes, 0, integBytes.length, _mop);
 
@@ -81,7 +83,7 @@ public class RpcGssCall extends RpcCall {
                 case RpcGssService.RPC_GSS_SVC_PRIVACY:
                     DataBodyPrivacy privacyData = new DataBodyPrivacy();
                     super.retrieveCall(privacyData);
-                    byte[] privacyBytes = privacyData.getData();
+                    byte[] privacyBytes = privacyData.getData().toBytes();
                     byte[] rawData = _gssContext.unwrap(privacyBytes, 0, privacyBytes.length, _mop);
 
                     xdr = new Xdr(rawData);
@@ -92,7 +94,7 @@ public class RpcGssCall extends RpcCall {
             }
         } catch (GSSException e) {
             _log.error("GSS error: {}", e.getMessage());
-            throw new RpcAuthException( "GSS error: " + e.getMessage() ,
+            throw new RpcAuthException("GSS error: " + e.getMessage(),
                     new RpcAuthError(RpcAuthStat.RPCSEC_GSS_CTXPROBLEM));
         }
     }
@@ -107,31 +109,32 @@ public class RpcGssCall extends RpcCall {
                     super.acceptedReply(state, reply);
                     break;
                 case RpcGssService.RPC_GSS_SVC_INTEGRITY:
-                    byte[] integBytes;
+                    Opaque integBytes;
                     try (Xdr xdr = new Xdr(256 * 1024)) {
                         xdr.beginEncoding();
                         xdr.xdrEncodeInt(authGss.getSequence());
                         reply.xdrEncode(xdr);
                         xdr.endEncoding();
-                        integBytes = xdr.getBytes();
+                        integBytes = xdr.toOpaque();
                     }
 
-                    byte[] checksum = _gssContext.getMIC(integBytes, 0, integBytes.length, _mop);
-                    DataBodyIntegrity integData = new DataBodyIntegrity(integBytes, checksum);
+                    byte[] checksum = _gssContext.getMIC(integBytes.toBytes(), 0, integBytes.numBytes(), _mop);
+                    DataBodyIntegrity integData = new DataBodyIntegrity(integBytes, Opaque
+                            .forMutableByteArray(checksum));
                     super.acceptedReply(state, integData);
                     break;
                 case RpcGssService.RPC_GSS_SVC_PRIVACY:
-                    byte[] rawData;
+                    Opaque rawData;
                     try (Xdr xdr = new Xdr(256 * 1024)) {
                         xdr.beginEncoding();
                         xdr.xdrEncodeInt(authGss.getSequence());
                         reply.xdrEncode(xdr);
                         xdr.endEncoding();
-                        rawData = xdr.getBytes();
+                        rawData = xdr.toOpaque();
                     }
 
-                    byte[] privacyBytes = _gssContext.wrap(rawData, 0, rawData.length, _mop);
-                    DataBodyPrivacy privacyData = new DataBodyPrivacy(privacyBytes);
+                    byte[] privacyBytes = _gssContext.wrap(rawData.toBytes(), 0, rawData.numBytes(), _mop);
+                    DataBodyPrivacy privacyData = new DataBodyPrivacy(Opaque.forImmutableBytes(privacyBytes));
                     super.acceptedReply(state, privacyData);
                     break;
             }

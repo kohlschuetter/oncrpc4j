@@ -19,16 +19,18 @@
  */
 package org.dcache.oncrpc4j.xdr;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+
 import org.dcache.oncrpc4j.grizzly.GrizzlyMemoryManager;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.memory.BuffersBuffer;
 import org.glassfish.grizzly.memory.ByteBufferWrapper;
 import org.glassfish.grizzly.memory.MemoryManager;
-
-import static com.google.common.base.Preconditions.checkState;
 
 public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable {
 
@@ -58,6 +60,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      * Memory manager used to allocate, resize buffers.
      */
     private final MemoryManager _memoryManager;
+
     /**
      * Create a new Xdr object with a buffer of given size.
      *
@@ -67,22 +70,26 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         this(GrizzlyMemoryManager.allocate(size), GrizzlyMemoryManager.getDefaultMemoryManager());
     }
 
-
     /**
      * Wraps a byte array into a Xdr stream
      *
-     * <p> The new Xdr will be backed by the given byte array;
-     *  that is, modifications to the Xdr will cause the array to be modified
-     * and vice versa.
+     * <p>
+     * The new Xdr will be backed by the given byte array; that is, modifications to the Xdr will cause the array to be
+     * modified and vice versa.
      *
-     * @param  bytes The array that will back this Xdr.
+     * @param bytes The array that will back this Xdr.
      */
     public Xdr(byte[] bytes) {
         this(GrizzlyMemoryManager.wrap(bytes), GrizzlyMemoryManager.getDefaultMemoryManager());
     }
 
+    public Xdr(Opaque bytes) {
+        this(bytes.toBytes());
+    }
+
     /**
      * Create a new XDR back ended with given {@link ByteBuffer}.
+     * 
      * @param body buffer to use
      * @deprecated this constructor shouldn't be ued
      */
@@ -93,6 +100,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
 
     /**
      * Create a new XDR back ended with given {@link ByteBuffer}.
+     * 
      * @param body buffer to use
      * @param memoryManager memory manager used to allocate provided buffer.
      */
@@ -131,6 +139,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
 
     /**
      * Tells whether there are any data available in the stream.
+     * 
      * @return true if, and only if, there is data available in the stream
      */
     public boolean hasMoreData() {
@@ -138,11 +147,9 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a "XDR int" value received from a
-     * XDR stream. A XDR int is 32 bits wide -- the same width Java's "int"
-     * data type has. This method is one of the basic methods all other
-     * methods can rely on. Because it's so basic, derived classes have to
-     * implement it.
+     * Decodes (aka "deserializes") a "XDR int" value received from a XDR stream. A XDR int is 32 bits wide -- the same
+     * width Java's "int" data type has. This method is one of the basic methods all other methods can rely on. Because
+     * it's so basic, derived classes have to implement it.
      *
      * @return The decoded int value.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
@@ -225,8 +232,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a float (which is a 32 bits wide floating
-     * point entity) read from a XDR stream.
+     * Decodes (aka "deserializes") a float (which is a 32 bits wide floating point entity) read from a XDR stream.
      *
      * @return Decoded float value.rs.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
@@ -237,8 +243,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a double (which is a 64 bits wide floating
-     * point entity) read from a XDR stream.
+     * Decodes (aka "deserializes") a double (which is a 64 bits wide floating point entity) read from a XDR stream.
      *
      * @return Decoded double value.rs.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
@@ -309,8 +314,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Get next opaque data.  The decoded data
-     * is always padded to be a multiple of four.
+     * Get next opaque data. The decoded data is always padded to be a multiple of four.
      *
      * @param buf buffer where date have to be stored
      * @param offset in the buffer.
@@ -327,38 +331,37 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         _buffer.position(_buffer.position() + padding);
     }
 
-    void xdrDecodeOpaque(byte[] buf,  int len) throws BadXdrOncRpcException {
+    void xdrDecodeOpaque(byte[] buf, int len) throws BadXdrOncRpcException {
         xdrDecodeOpaque(buf, 0, len);
     }
 
     @Override
-    public byte[] xdrDecodeOpaque(int len) throws BadXdrOncRpcException {
+    public Opaque xdrDecodeOpaque(int len) throws BadXdrOncRpcException {
         if (len == 0) {
-            return EMPTY_BYTE_ARRAY;
+            return Opaque.EMPTY_OPAQUE;
         }
         byte[] opaque = new byte[len];
         xdrDecodeOpaque(opaque, len);
-        return opaque;
+        return Opaque.forImmutableBytes(opaque);
     }
 
     /**
-     * Decodes (aka "deserializes") a XDR opaque value, which is represented
-     * by a vector of byte values. The length of the opaque value to decode
-     * is pulled off of the XDR stream, so the caller does not need to know
-     * the exact length in advance. The decoded data is always padded to be
-     * a multiple of four (because that's what the sender does).
+     * Decodes (aka "deserializes") a XDR opaque value, which is represented by a vector of byte values. The length of
+     * the opaque value to decode is pulled off of the XDR stream, so the caller does not need to know the exact length
+     * in advance. The decoded data is always padded to be a multiple of four (because that's what the sender does).
+     * 
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
      */
     @Override
-    public byte [] xdrDecodeDynamicOpaque() throws BadXdrOncRpcException {
+    public Opaque xdrDecodeDynamicOpaque() throws BadXdrOncRpcException {
         int length = xdrDecodeInt();
         if (length == 0) {
-            return EMPTY_BYTE_ARRAY;
+            return Opaque.EMPTY_OPAQUE;
         }
         checkArraySize(length);
-        byte [] opaque = new byte[length];
+        byte[] opaque = new byte[length];
         xdrDecodeOpaque(opaque, 0, length);
-        return opaque;
+        return Opaque.forImmutableBytes(opaque);
     }
 
     /**
@@ -371,7 +374,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     public String xdrDecodeString() throws BadXdrOncRpcException {
         int len = xdrDecodeInt();
         if (len == 0) {
-          return "";
+            return "";
         }
         checkArraySize(len);
         byte[] bytes = new byte[len];
@@ -386,8 +389,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a long (which is called a "hyper" in XDR
-     * babble and is 64&nbsp;bits wide) read from a XDR stream.
+     * Decodes (aka "deserializes") a long (which is called a "hyper" in XDR babble and is 64&nbsp;bits wide) read from
+     * a XDR stream.
      *
      * @return Decoded long value.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
@@ -405,11 +408,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         int padding = (4 - (len & 3)) & 3;
 
         ensureBytes(len + padding);
-       /*
-        * as of grizzly 2.2.1 toByteBuffer returns a ByteBuffer view of
-        * the backended heap. To be able to use rewind, flip and so on
-        * we have to use slice of it.
-        */
+        /*
+         * as of grizzly 2.2.1 toByteBuffer returns a ByteBuffer view of the backended heap. To be able to use rewind,
+         * flip and so on we have to use slice of it.
+         */
         ByteBuffer slice = _buffer.toByteBuffer().slice();
         slice.rewind();
         slice.limit(len);
@@ -418,11 +420,9 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a vector of bytes, which is nothing more
-     * than a series of octets (or 8 bits wide bytes), each packed into its very
-     * own 4 bytes (XDR int). Byte vectors are decoded together with a
-     * preceeding length value. This way the receiver doesn't need to know the
-     * length of the vector in advance.
+     * Decodes (aka "deserializes") a vector of bytes, which is nothing more than a series of octets (or 8 bits wide
+     * bytes), each packed into its very own 4 bytes (XDR int). Byte vectors are decoded together with a preceeding
+     * length value. This way the receiver doesn't need to know the length of the vector in advance.
      *
      * @return The byte vector containing the decoded data.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
@@ -435,9 +435,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a vector of bytes, which is nothing more
-     * than a series of octets (or 8 bits wide bytes), each packed into its very
-     * own 4 bytes (XDR int).
+     * Decodes (aka "deserializes") a vector of bytes, which is nothing more than a series of octets (or 8 bits wide
+     * bytes), each packed into its very own 4 bytes (XDR int).
      *
      * @param length of vector to read.
      *
@@ -466,8 +465,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a short (which is a 16 bit quantity) read
-     * from this XDR stream.
+     * Decodes (aka "deserializes") a short (which is a 16 bit quantity) read from this XDR stream.
      *
      * @return Decoded short value.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
@@ -478,8 +476,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a vector of short integers read from a XDR
-     * stream.
+     * Decodes (aka "deserializes") a vector of short integers read from a XDR stream.
      *
      * @return Decoded vector of short integers.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
@@ -492,8 +489,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Decodes (aka "deserializes") a vector of short integers read from a XDR
-     * stream.
+     * Decodes (aka "deserializes") a vector of short integers read from a XDR stream.
      *
      * @param length of vector to read.
      *
@@ -510,15 +506,13 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
     ////////////////////////////////////////////////////////////////////////////
     //
-    //         Encoder
+    // Encoder
     //
     ////////////////////////////////////////////////////////////////////////////
 
     /**
-     * Encodes (aka "serializes") a "XDR int" value and writes it down a
-     * XDR stream. A XDR int is 32 bits wide -- the same width Java's "int"
-     * data type has. This method is one of the basic methods all other
-     * methods can rely on.
+     * Encodes (aka "serializes") a "XDR int" value and writes it down a XDR stream. A XDR int is 32 bits wide -- the
+     * same width Java's "int" data type has. This method is one of the basic methods all other methods can rely on.
      */
     @Override
     public void xdrEncodeInt(int value) {
@@ -529,8 +523,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     /**
      * Returns the {@link Buffer} that backs this xdr.
      *
-     * <p>Modifications to this xdr's content will cause the returned
-     * buffer's content to be modified, and vice versa.
+     * <p>
+     * Modifications to this xdr's content will cause the returned buffer's content to be modified, and vice versa.
      *
      * @return The {@link Buffer} that backs this xdr
      */
@@ -539,28 +533,25 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of ints and writes it down
-     * this XDR stream.
+     * Encodes (aka "serializes") a vector of ints and writes it down this XDR stream.
      *
      * @param values int vector to be encoded.
      *
      */
     @Override
     public void xdrEncodeIntVector(int[] values) {
-        ensureCapacity(Integer.BYTES+Integer.BYTES*values.length);
+        ensureCapacity(Integer.BYTES + Integer.BYTES * values.length);
         _buffer.putInt(values.length);
-        for (int value: values) {
-            _buffer.putInt( value );
+        for (int value : values) {
+            _buffer.putInt(value);
         }
     }
 
     /**
-     * Encodes (aka "serializes") a vector of ints and writes it down this XDR
-     * stream.
+     * Encodes (aka "serializes") a vector of ints and writes it down this XDR stream.
      *
      * @param value int vector to be encoded.
-     * @param length of vector to write. This parameter is used as a sanity
-     * check.
+     * @param length of vector to write. This parameter is used as a sanity check.
      */
     @Override
     public void xdrEncodeIntFixedVector(int[] value, int length) {
@@ -573,15 +564,14 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of longs and writes it down
-     * this XDR stream.
+     * Encodes (aka "serializes") a vector of longs and writes it down this XDR stream.
      *
      * @param values long vector to be encoded.
      *
      */
     @Override
     public void xdrEncodeLongVector(long[] values) {
-        ensureCapacity(Integer.BYTES+Long.BYTES*values.length);
+        ensureCapacity(Integer.BYTES + Long.BYTES * values.length);
         _buffer.putInt(values.length);
         for (long value : values) {
             _buffer.putLong(value);
@@ -589,12 +579,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of longs and writes it down this XDR
-     * stream.
+     * Encodes (aka "serializes") a vector of longs and writes it down this XDR stream.
      *
      * @param value long vector to be encoded.
-     * @param length of vector to write. This parameter is used as a sanity
-     * check.
+     * @param length of vector to write. This parameter is used as a sanity check.
      */
     @Override
     public void xdrEncodeLongFixedVector(long[] value, int length) {
@@ -605,10 +593,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
             xdrEncodeLong(value[i]);
         }
     }
-    
+
     /**
-     * Encodes (aka "serializes") a float (which is a 32 bits wide floating
-     * point quantity) and write it down this XDR stream.
+     * Encodes (aka "serializes") a float (which is a 32 bits wide floating point quantity) and write it down this XDR
+     * stream.
      *
      * @param value Float value to encode.
      */
@@ -618,8 +606,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a double (which is a 64 bits wide floating
-     * point quantity) and write it down this XDR stream.
+     * Encodes (aka "serializes") a double (which is a 64 bits wide floating point quantity) and write it down this XDR
+     * stream.
      *
      * @param value Double value to encode.
      */
@@ -629,8 +617,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of floats and writes it down this XDR
-     * stream.
+     * Encodes (aka "serializes") a vector of floats and writes it down this XDR stream.
      *
      * @param value float vector to be encoded.
      */
@@ -644,12 +631,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of floats and writes it down this XDR
-     * stream.
+     * Encodes (aka "serializes") a vector of floats and writes it down this XDR stream.
      *
      * @param value float vector to be encoded.
-     * @param length of vector to write. This parameter is used as a sanity
-     * check.
+     * @param length of vector to write. This parameter is used as a sanity check.
      */
     @Override
     public void xdrEncodeFloatFixedVector(float[] value, int length) {
@@ -662,8 +647,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of doubles and writes it down this
-     * XDR stream.
+     * Encodes (aka "serializes") a vector of doubles and writes it down this XDR stream.
      *
      * @param value double vector to be encoded.
      */
@@ -677,12 +661,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of doubles and writes it down this
-     * XDR stream.
+     * Encodes (aka "serializes") a vector of doubles and writes it down this XDR stream.
      *
      * @param value double vector to be encoded.
-     * @param length of vector to write. This parameter is used as a sanity
-     * check.
+     * @param length of vector to write. This parameter is used as a sanity check.
      */
     @Override
     public void xdrEncodeDoubleFixedVector(double[] value, int length) {
@@ -700,65 +682,61 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      */
     @Override
     public void xdrEncodeString(String string) {
-        if( string == null ) string = "";
-        xdrEncodeDynamicOpaque(string.getBytes(StandardCharsets.UTF_8));
+        if (string == null)
+            string = "";
+        xdrEncodeDynamicOpaque(Opaque.forUtf8Bytes(string));
     }
 
-    private static final byte [] paddingZeros = { 0, 0, 0, 0 };
+    private static final byte[] paddingZeros = {0, 0, 0, 0};
 
     /**
-     * Encodes (aka "serializes") a XDR opaque value, which is represented
-     * by a vector of byte values. Only the opaque value is encoded, but
-     * no length indication is preceeding the opaque value, so the receiver
-     * has to know how long the opaque value will be. The encoded data is
-     * always padded to be a multiple of four. If the length of the given byte
-     * vector is not a multiple of four, zero bytes will be used for padding.
+     * Encodes (aka "serializes") a XDR opaque value, which is represented by a vector of byte values. Only the opaque
+     * value is encoded, but no length indication is preceeding the opaque value, so the receiver has to know how long
+     * the opaque value will be. The encoded data is always padded to be a multiple of four. If the length of the given
+     * byte vector is not a multiple of four, zero bytes will be used for padding.
      */
     @Override
-    public void xdrEncodeOpaque(byte[] bytes, int offset, int len) {
+    public void xdrEncodeOpaque(Opaque bytes, int offset, int len) {
         int padding = (4 - (len & 3)) & 3;
-        ensureCapacity(len+padding);
-        _buffer.put(bytes, offset, len);
+        ensureCapacity(len + padding);
+        _buffer.put(bytes.toBytes(), offset, len);
         _buffer.put(paddingZeros, 0, padding);
     }
 
     @Override
-    public void xdrEncodeOpaque(byte[] bytes, int len) {
+    public void xdrEncodeOpaque(Opaque bytes, int len) {
         xdrEncodeOpaque(bytes, 0, len);
     }
 
     /**
-     * Encodes (aka "serializes") a XDR opaque value, which is represented
-     * by a vector of byte values. The length of the opaque value is written
-     * to the XDR stream, so the receiver does not need to know
-     * the exact length in advance. The encoded data is always padded to be
-     * a multiple of four to maintain XDR alignment.
+     * Encodes (aka "serializes") a XDR opaque value, which is represented by a vector of byte values. The length of the
+     * opaque value is written to the XDR stream, so the receiver does not need to know the exact length in advance. The
+     * encoded data is always padded to be a multiple of four to maintain XDR alignment.
      *
      */
     @Override
-    public void xdrEncodeDynamicOpaque(byte [] opaque) {
-        xdrEncodeInt(opaque.length);
-        xdrEncodeOpaque(opaque, 0, opaque.length);
+    public void xdrEncodeDynamicOpaque(Opaque opaque) {
+        xdrEncodeInt(opaque.numBytes());
+        xdrEncodeOpaque(opaque, 0, opaque.numBytes());
     }
 
     @Override
     public void xdrEncodeBoolean(boolean bool) {
-        xdrEncodeInt( bool ? 1 : 0);
+        xdrEncodeInt(bool ? 1 : 0);
     }
 
     /**
-     * Encodes (aka "serializes") a long (which is called a "hyper" in XDR
-     * babble and is 64&nbsp;bits wide) and write it down this XDR stream.
+     * Encodes (aka "serializes") a long (which is called a "hyper" in XDR babble and is 64&nbsp;bits wide) and write it
+     * down this XDR stream.
      */
     @Override
     public void xdrEncodeLong(long value) {
         ensureCapacity(Long.BYTES);
-       _buffer.putLong(value);
+        _buffer.putLong(value);
     }
 
     /**
-     * Encodes (aka "serializes") a sequence of bytes from the given buffer
-     * to this Xdr stream.
+     * Encodes (aka "serializes") a sequence of bytes from the given buffer to this Xdr stream.
      *
      * @param buf The buffer from which bytes are to be retrieved.
      */
@@ -767,14 +745,14 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         int len = buf.remaining();
         int padding = (4 - (len & 3)) & 3;
         xdrEncodeInt(len);
-        ensureCapacity(len+padding);
+        ensureCapacity(len + padding);
         _buffer.put(buf);
         _buffer.position(_buffer.position() + padding);
     }
 
     /**
-     * A version of {@link #xdrEncodeByteBuffer(ByteBuffer)} which avoids internal copy.
-     * Note: any change to the {@code buf} will cause unpredicted behavior.
+     * A version of {@link #xdrEncodeByteBuffer(ByteBuffer)} which avoids internal copy. Note: any change to the
+     * {@code buf} will cause unpredicted behavior.
      *
      * @param buf The buffer from which bytes are to be retrieved.
      */
@@ -785,8 +763,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * A version of {@link #xdrEncodeShallowByteBuffer(ByteBuffer)} which uses Grizzly {@code buffer}.
-     * Note: any change to the {@code buf} will cause unpredicted behavior.
+     * A version of {@link #xdrEncodeShallowByteBuffer(ByteBuffer)} which uses Grizzly {@code buffer}. Note: any change
+     * to the {@code buf} will cause unpredicted behavior.
      *
      * @param buf The buffer from which bytes are to be retrieved.
      */
@@ -808,11 +786,9 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of bytes, which is nothing more than
-     * a series of octets (or 8 bits wide bytes), each packed into its very own
-     * 4 bytes (XDR int). Byte vectors are encoded together with a preceeding
-     * length value. This way the receiver doesn't need to know the length of
-     * the vector in advance.
+     * Encodes (aka "serializes") a vector of bytes, which is nothing more than a series of octets (or 8 bits wide
+     * bytes), each packed into its very own 4 bytes (XDR int). Byte vectors are encoded together with a preceeding
+     * length value. This way the receiver doesn't need to know the length of the vector in advance.
      *
      * @param value Byte vector to encode.
      */
@@ -830,13 +806,11 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of bytes, which is nothing more than
-     * a series of octets (or 8 bits wide bytes), each packed into its very own
-     * 4 bytes (XDR int).
+     * Encodes (aka "serializes") a vector of bytes, which is nothing more than a series of octets (or 8 bits wide
+     * bytes), each packed into its very own 4 bytes (XDR int).
      *
      * @param value Byte vector to encode.
-     * @param length of vector to write. This parameter is used as a sanity
-     * check.
+     * @param length of vector to write. This parameter is used as a sanity check.
      */
     @Override
     public void xdrEncodeByteFixedVector(byte[] value, int length) {
@@ -867,8 +841,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a short (which is a 16 bits wide quantity) and
-     * write it down this XDR stream.
+     * Encodes (aka "serializes") a short (which is a 16 bits wide quantity) and write it down this XDR stream.
      *
      * @param value Short value to encode.
      */
@@ -878,8 +851,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of short integers and writes it down
-     * this XDR stream.
+     * Encodes (aka "serializes") a vector of short integers and writes it down this XDR stream.
      *
      * @param value short vector to be encoded.
      */
@@ -893,12 +865,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Encodes (aka "serializes") a vector of short integers and writes it down
-     * this XDR stream.
+     * Encodes (aka "serializes") a vector of short integers and writes it down this XDR stream.
      *
      * @param value short vector to be encoded.
-     * @param length of vector to write. This parameter is used as a sanity
-     * check.
+     * @param length of vector to write. This parameter is used as a sanity check.
      */
     @Override
     public void xdrEncodeShortFixedVector(short[] value, int length) {
@@ -911,9 +881,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
-     * Returns the array that contains the xdr encoded data. The changes in the Xdr will not be
-     * visible to the array and vice versa. The encoding process must be finished before {@code getBytes}
-     * method is called.
+     * Returns the array that contains the xdr encoded data. The changes in the Xdr will not be visible to the array and
+     * vice versa. The encoding process must be finished before {@code getBytes} method is called.
      *
      * @return The array that contains buffer's data.
      * @throws IllegalStateException if {@link Xdr#endEncoding()} is not called before.
@@ -928,6 +897,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         return bytes;
     }
 
+    public Opaque toOpaque() {
+        return Opaque.forImmutableBytes(getBytes());
+    }
+
     /**
      * Closes this stream, relinquishing any underlying resources.
      */
@@ -936,7 +909,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     private void ensureCapacity(int size) {
-        if(_buffer.remaining() < size) {
+        if (_buffer.remaining() < size) {
             int oldCapacity = _buffer.capacity();
             int newCapacity = Math.max((oldCapacity * 3) / 2 + 1, oldCapacity + size);
             _buffer = GrizzlyMemoryManager.reallocate(_memoryManager, _buffer, newCapacity);

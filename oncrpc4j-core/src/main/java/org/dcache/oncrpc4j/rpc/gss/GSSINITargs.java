@@ -20,7 +20,9 @@
 package org.dcache.oncrpc4j.rpc.gss;
 
 import java.io.IOException;
+
 import org.dcache.oncrpc4j.rpc.OncRpcException;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
@@ -30,20 +32,20 @@ import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
  */
 public class GSSINITargs implements XdrAble {
 
-    private byte[] _token;
+    private Opaque _token;
 
-    public byte[] getToken() {
+    public Opaque getToken() {
         return _token;
     }
 
-    public void setToken(byte[] token) {
+    public void setToken(Opaque token) {
         this._token = token;
     }
 
     public GSSINITargs() {
     }
 
-    public GSSINITargs(byte[] token) {
+    public GSSINITargs(Opaque token) {
         this._token = token;
     }
 

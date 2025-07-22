@@ -19,14 +19,10 @@
  */
 package org.dcache.oncrpc4j.rpc.gss;
 
-import com.google.common.primitives.Ints;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.dcache.oncrpc4j.util.Bytes;
-import org.dcache.oncrpc4j.xdr.BadXdrOncRpcException;
+
 import org.dcache.oncrpc4j.rpc.RpcAuthError;
 import org.dcache.oncrpc4j.rpc.RpcAuthStat;
 import org.dcache.oncrpc4j.rpc.RpcAuthType;
@@ -34,6 +30,9 @@ import org.dcache.oncrpc4j.rpc.RpcAuthVerifier;
 import org.dcache.oncrpc4j.rpc.RpcCall;
 import org.dcache.oncrpc4j.rpc.RpcException;
 import org.dcache.oncrpc4j.rpc.RpcRejectStatus;
+import org.dcache.oncrpc4j.util.Bytes;
+import org.dcache.oncrpc4j.util.Opaque;
+import org.dcache.oncrpc4j.xdr.BadXdrOncRpcException;
 import org.glassfish.grizzly.filterchain.BaseFilter;
 import org.glassfish.grizzly.filterchain.Filter;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
@@ -41,12 +40,14 @@ import org.glassfish.grizzly.filterchain.NextAction;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.MessageProp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.primitives.Ints;
 
 /**
- * A {@link Filter} that handles RPCSEC_GSS requests.
- * Filter is responsible to establish and destroy GSS context.
- * For requests with established contexts RPC requests repacked into
- * GSS aware {@link RpcGssCall}.
+ * A {@link Filter} that handles RPCSEC_GSS requests. Filter is responsible to establish and destroy GSS context. For
+ * requests with established contexts RPC requests repacked into GSS aware {@link RpcGssCall}.
  *
  * @since 0.0.4
  */
@@ -55,15 +56,13 @@ public class GssProtocolFilter extends BaseFilter {
     private final static Logger _log = LoggerFactory.getLogger(GssProtocolFilter.class);
 
     /**
-     * GSS handshake status returned to the client to indicate that the context
-     * creation phase is complete.
+     * GSS handshake status returned to the client to indicate that the context creation phase is complete.
      */
     public static final int COMPLETE = 0;
 
     /**
-     * GSS handshake status returned to the client to indicate that another
-     * token is required to compete context creation. This status code can be
-     * returned several times when multiple token exchanges required.
+     * GSS handshake status returned to the client to indicate that another token is required to compete context
+     * creation. This status code can be returned several times when multiple token exchanges required.
      */
     public static final int CONTINUE_NEEDED = 1;
 
@@ -93,17 +92,21 @@ public class GssProtocolFilter extends BaseFilter {
                     byte[] handle = new byte[16];
                     Bytes.putLong(handle, 0, uuid.getLeastSignificantBits());
                     Bytes.putLong(handle, 8, uuid.getMostSignificantBits());
-                    gssContext = _gssSessionManager.createContext(handle);
-                    authGss.setHandle(handle);
+
+                    Opaque handleOpaque = Opaque.forImmutableBytes(handle);
+
+                    gssContext = _gssSessionManager.createContext(handleOpaque);
+                    authGss.setHandle(handleOpaque);
                     // fall through
                 case GssProc.RPCSEC_GSS_CONTINUE_INIT:
-                    if(gssContext == null)
-                        gssContext =  _gssSessionManager.getContext(authGss.getHandle());
+                    if (gssContext == null)
+                        gssContext = _gssSessionManager.getContext(authGss.getHandle());
                     GSSINITargs gssArgs = new GSSINITargs();
                     GSSINITres res = new GSSINITres();
                     call.retrieveCall(gssArgs);
-                    byte[] inToken = gssArgs.getToken();
-                    byte[] outToken = gssContext.acceptSecContext(inToken, 0, inToken.length);
+                    Opaque inToken = gssArgs.getToken();
+                    Opaque outToken = Opaque.forImmutableBytes(gssContext.acceptSecContext(inToken.toBytes(), 0,
+                            inToken.numBytes()));
                     res.setHandle(authGss.getHandle());
                     res.setGssMajor(gssContext.isEstablished() ? COMPLETE : CONTINUE_NEEDED);
                     res.setGssMinor(0);
@@ -114,7 +117,7 @@ public class GssProtocolFilter extends BaseFilter {
                         res.setSequence(_sequence);
                         byte[] crc = Ints.toByteArray(_sequence);
                         crc = gssContext.getMIC(crc, 0, 4, new MessageProp(false));
-                        authGss.setVerifier(new RpcAuthVerifier(authGss.type(), crc));
+                        authGss.setVerifier(new RpcAuthVerifier(authGss.type(), Opaque.forMutableByteArray(crc)));
                     }
                     call.reply(res);
                     break;
@@ -124,7 +127,7 @@ public class GssProtocolFilter extends BaseFilter {
                     gssContext.dispose();
                     break;
                 case GssProc.RPCSEC_GSS_DATA:
-                    gssContext =  _gssSessionManager.getEstablishedContext(authGss.getHandle());
+                    gssContext = _gssSessionManager.getEstablishedContext(authGss.getHandle());
                     validateVerifier(authGss, gssContext);
                     authGss.getSubject()
                             .getPrincipals()
@@ -132,7 +135,7 @@ public class GssProtocolFilter extends BaseFilter {
                     _log.debug("RPCGSS_SEC: {}", gssContext.getSrcName());
                     byte[] crc = Ints.toByteArray(authGss.getSequence());
                     crc = gssContext.getMIC(crc, 0, 4, new MessageProp(false));
-                    authGss.setVerifier(new RpcAuthVerifier(authGss.type(), crc));
+                    authGss.setVerifier(new RpcAuthVerifier(authGss.type(), Opaque.forMutableByteArray(crc)));
                     ctx.setMessage(new RpcGssCall(call, gssContext, new MessageProp(false)));
                     hasContext = true;
             }
@@ -148,15 +151,14 @@ public class GssProtocolFilter extends BaseFilter {
             _log.warn("GSS mechanism failed {}", e.getMessage());
         }
 
-        if(hasContext)
+        if (hasContext)
             return ctx.getInvokeAction();
 
         return ctx.getStopAction();
     }
 
     /**
-     * According to rfc2203 verifier should contain the checksum of the RPC header
-     * up to and including the credential.
+     * According to rfc2203 verifier should contain the checksum of the RPC header up to and including the credential.
      *
      * @param auth RPC request authentication credentials.
      * @param context gss context
@@ -166,7 +168,7 @@ public class GssProtocolFilter extends BaseFilter {
         ByteBuffer header = auth.getHeader();
         byte[] bb = new byte[header.remaining()];
         header.get(bb);
-        context.verifyMIC(auth.getVerifier().getBody(), 0, auth.getVerifier().getBody().length,
+        context.verifyMIC(auth.getVerifier().getBody().toBytes(), 0, auth.getVerifier().getBody().numBytes(),
                 bb, 0, bb.length, new MessageProp(false));
     }
 }

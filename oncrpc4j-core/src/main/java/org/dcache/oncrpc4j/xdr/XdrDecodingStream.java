@@ -21,6 +21,8 @@ package org.dcache.oncrpc4j.xdr;
 
 import java.nio.ByteBuffer;
 
+import org.dcache.oncrpc4j.util.Opaque;
+
 /**
  * Defines interface for decoding XDR stream. A decoding
  * XDR stream returns data in the form of Java data types which it reads
@@ -35,8 +37,8 @@ public interface XdrDecodingStream {
     int xdrDecodeInt() throws BadXdrOncRpcException;
     int[] xdrDecodeIntVector() throws BadXdrOncRpcException;
     int[] xdrDecodeIntFixedVector(int len) throws BadXdrOncRpcException;
-    byte[] xdrDecodeDynamicOpaque() throws BadXdrOncRpcException;
-    byte[] xdrDecodeOpaque(int size) throws BadXdrOncRpcException;
+    Opaque xdrDecodeDynamicOpaque() throws BadXdrOncRpcException;
+    Opaque xdrDecodeOpaque(int size) throws BadXdrOncRpcException;
     boolean xdrDecodeBoolean() throws BadXdrOncRpcException;
     String xdrDecodeString() throws BadXdrOncRpcException;
     long xdrDecodeLong() throws BadXdrOncRpcException;

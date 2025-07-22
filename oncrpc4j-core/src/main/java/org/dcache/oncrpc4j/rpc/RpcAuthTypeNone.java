@@ -19,20 +19,22 @@
  */
 package org.dcache.oncrpc4j.rpc;
 
+import java.io.IOException;
+
+import javax.security.auth.Subject;
+
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.security.auth.Subject;
-import java.io.IOException;
-
 public class RpcAuthTypeNone implements RpcAuth, XdrAble {
 
     private final int _type = RpcAuthType.NONE;
-    private byte[] body;
-    private RpcAuthVerifier _verifier = new RpcAuthVerifier(RpcAuthType.NONE, new byte[0]);
+    private Opaque body;
+    private RpcAuthVerifier _verifier = new RpcAuthVerifier(RpcAuthType.NONE, Opaque.EMPTY_OPAQUE);
 
     private static final Subject _subject;
     static {
@@ -43,10 +45,10 @@ public class RpcAuthTypeNone implements RpcAuth, XdrAble {
     private final static Logger _log = LoggerFactory.getLogger(RpcAuthTypeNone.class);
 
     public RpcAuthTypeNone() {
-        this(new byte[0]);
+        this(Opaque.EMPTY_OPAQUE);
     }
 
-    public RpcAuthTypeNone(byte[] body) {
+    public RpcAuthTypeNone(Opaque body) {
         this.body = body;
     }
 

@@ -20,7 +20,9 @@
 package org.dcache.oncrpc4j.rpc.gss;
 
 import java.io.IOException;
+
 import org.dcache.oncrpc4j.rpc.OncRpcException;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
@@ -30,13 +32,13 @@ import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
  */
 public class DataBodyIntegrity implements XdrAble {
 
-    private byte[] data;
-    private byte[] checksum;
+    private Opaque data;
+    private Opaque checksum;
 
     public DataBodyIntegrity() {
     }
 
-    public DataBodyIntegrity(byte[] data, byte[] checksum) {
+    public DataBodyIntegrity(Opaque data, Opaque checksum) {
         this.data = data;
         this.checksum = checksum;
     }
@@ -53,11 +55,11 @@ public class DataBodyIntegrity implements XdrAble {
         xdr.xdrEncodeDynamicOpaque(checksum);
     }
 
-    public byte[] getChecksum() {
+    public Opaque getChecksum() {
         return checksum;
     }
 
-    public byte[] getData() {
+    public Opaque getData() {
         return data;
     }
 }

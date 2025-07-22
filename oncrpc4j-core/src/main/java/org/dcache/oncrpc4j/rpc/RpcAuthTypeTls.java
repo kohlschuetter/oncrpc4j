@@ -20,9 +20,10 @@
 package org.dcache.oncrpc4j.rpc;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+
 import javax.security.auth.Subject;
 
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
@@ -33,8 +34,9 @@ import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
  */
 public class RpcAuthTypeTls implements RpcAuth, XdrAble {
 
-    public static final RpcAuthVerifier STARTTLS_VERIFIER = new RpcAuthVerifier(RpcAuthType.NONE, "STARTTLS".getBytes(StandardCharsets.US_ASCII));
-    public static final RpcAuthVerifier EMPTY_VERIFIER = new RpcAuthVerifier(RpcAuthType.NONE, new byte[0]);
+    public static final RpcAuthVerifier STARTTLS_VERIFIER = new RpcAuthVerifier(RpcAuthType.NONE, Opaque
+            .forUtf8Bytes("STARTTLS"));
+    public static final RpcAuthVerifier EMPTY_VERIFIER = new RpcAuthVerifier(RpcAuthType.NONE, Opaque.EMPTY_OPAQUE);
 
     private final RpcAuthVerifier verifier;
     private final Subject _subject;
@@ -67,11 +69,11 @@ public class RpcAuthTypeTls implements RpcAuth, XdrAble {
     @Override
     public void xdrDecode(XdrDecodingStream xdr) throws OncRpcException, IOException {
 
-        byte[] opaque = xdr.xdrDecodeDynamicOpaque();
+        Opaque opaque = xdr.xdrDecodeDynamicOpaque();
 
         // we are not interested in the content of the verifier, but have to consume it
         int type = xdr.xdrDecodeInt();
-        byte[] rawVerifier = xdr.xdrDecodeDynamicOpaque();
+        Opaque rawVerifier = xdr.xdrDecodeDynamicOpaque();
     }
 
     @Override

@@ -21,39 +21,42 @@ package org.dcache.oncrpc4j.rpc.gss;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import javax.security.auth.Subject;
+
 import org.dcache.oncrpc4j.rpc.OncRpcException;
 import org.dcache.oncrpc4j.rpc.RpcAuth;
 import org.dcache.oncrpc4j.rpc.RpcAuthType;
 import org.dcache.oncrpc4j.rpc.RpcAuthVerifier;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.Xdr;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
 import org.glassfish.grizzly.Buffer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RpcAuthGss implements RpcAuth, XdrAble {
 
     private final static Logger _log = LoggerFactory.getLogger(RpcAuthGss.class);
 
     private final int _type = RpcAuthType.RPCGSS_SEC;
-    private RpcAuthVerifier _verifier = new RpcAuthVerifier(_type, new byte[0]);
+    private RpcAuthVerifier _verifier = new RpcAuthVerifier(_type, Opaque.EMPTY_OPAQUE);
     private int _version;
     private int _proc;
     private int _sequence;
     private int _service;
-    private byte[] _handle;
+    private Opaque _handle;
     private Buffer _header;
 
     private Subject _subject = new Subject();
 
-    public byte[] getHandle() {
+    public Opaque getHandle() {
         return _handle;
     }
 
-    public void setHandle(byte[] handle) {
+    public void setHandle(Opaque handle) {
         _handle = handle;
     }
 

@@ -19,10 +19,12 @@
  */
 package org.dcache.oncrpc4j.rpc;
 
+import java.io.IOException;
+
+import org.dcache.oncrpc4j.util.Opaque;
+import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
-import org.dcache.oncrpc4j.xdr.XdrAble;
-import java.io.IOException;
 
 /**
  * Authentication verifier. Depending of status of credentials the content may
@@ -31,9 +33,9 @@ import java.io.IOException;
 public class RpcAuthVerifier implements XdrAble {
 
     private int _type;
-    private byte[] _body;
+    private Opaque _body;
 
-    public RpcAuthVerifier(int type, byte[] body) {
+    public RpcAuthVerifier(int type, Opaque body) {
         _type = type;
         _body = body;
     }
@@ -46,7 +48,7 @@ public class RpcAuthVerifier implements XdrAble {
         return _type;
     }
 
-    public byte[] getBody() {
+    public Opaque getBody() {
         return _body;
     }
 

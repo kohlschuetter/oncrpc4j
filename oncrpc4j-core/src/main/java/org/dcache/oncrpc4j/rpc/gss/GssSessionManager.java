@@ -23,21 +23,19 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.security.auth.Subject;
 
 import org.dcache.oncrpc4j.rpc.RpcLoginService;
+import org.dcache.oncrpc4j.rpc.RpcTransport;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.XdrOpaque;
-
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.Oid;
-
-import org.dcache.oncrpc4j.rpc.RpcTransport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GssSessionManager {
 
@@ -72,20 +70,20 @@ public class GssSessionManager {
     }
     private final Map<XdrOpaque, GSSContext> sessions = new ConcurrentHashMap<>();
 
-    public GSSContext createContext(byte[] handle) throws GSSException {
+    public GSSContext createContext(Opaque handle) throws GSSException {
         GSSContext context = gManager.createContext(_serviceCredential);
-        sessions.put(new XdrOpaque(handle), context);
+        sessions.put(new XdrOpaque(handle.toImmutableOpaque()), context);
         return context;
     }
 
-    public GSSContext getContext(byte[] handle) throws GSSException {
+    public GSSContext getContext(Opaque handle) throws GSSException {
         GSSContext context = sessions.get(new XdrOpaque(handle));
         if(context == null) {
             throw new GSSException(GSSException.NO_CONTEXT);
         }
         return context;
     }
-    public GSSContext getEstablishedContext(byte[] handle) throws GSSException {
+    public GSSContext getEstablishedContext(Opaque handle) throws GSSException {
         GSSContext context = getContext(handle);
         if (!context.isEstablished()) {
             throw new GSSException(GSSException.NO_CONTEXT);
@@ -93,7 +91,7 @@ public class GssSessionManager {
         return context;
     }
 
-    public GSSContext destroyContext(byte[] handle) throws GSSException {
+    public GSSContext destroyContext(Opaque handle) throws GSSException {
         GSSContext context = sessions.remove(new XdrOpaque(handle));
         if(context == null || !context.isEstablished()) {
             throw new GSSException(GSSException.NO_CONTEXT);

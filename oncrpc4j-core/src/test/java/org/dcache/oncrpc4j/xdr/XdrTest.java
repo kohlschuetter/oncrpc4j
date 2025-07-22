@@ -19,10 +19,22 @@
  */
 package org.dcache.oncrpc4j.xdr;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.nio.ByteBuffer;
-import org.dcache.oncrpc4j.util.Bytes;
 import java.nio.ByteOrder;
+
 import org.dcache.oncrpc4j.grizzly.GrizzlyMemoryManager;
+import org.dcache.oncrpc4j.util.Bytes;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.memory.BuffersBuffer;
 import org.glassfish.grizzly.memory.ByteBufferManager;
@@ -30,14 +42,6 @@ import org.glassfish.grizzly.memory.CompositeBuffer;
 import org.glassfish.grizzly.memory.MemoryManager;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
 
 public class XdrTest {
 
@@ -65,7 +69,7 @@ public class XdrTest {
     @Test
     public void testEncodeDecodeOpaque() throws BadXdrOncRpcException {
 
-        byte[] data = "some random data".getBytes();
+        Opaque data = Opaque.forBytes("some random data".getBytes());
         XdrEncodingStream encoder = new Xdr(_buffer);
         encoder.beginEncoding();
         encoder.xdrEncodeDynamicOpaque(data);
@@ -73,25 +77,25 @@ public class XdrTest {
 
         XdrDecodingStream decoder = new Xdr(_buffer);
         decoder.beginDecoding();
-        byte[] decoded = decoder.xdrDecodeDynamicOpaque();
+        Opaque decoded = decoder.xdrDecodeDynamicOpaque();
 
-        assertArrayEquals("encoded/decoded data do not match", data, decoded);
+        assertEquals("encoded/decoded data do not match", data, decoded);
     }
 
     @Test
     public void testEncodeDecodeOpaque2() throws BadXdrOncRpcException {
 
-        byte[] data = "some random data".getBytes();
+        Opaque data = Opaque.forMutableByteArray("some random data".getBytes());
         XdrEncodingStream encoder = new Xdr(_buffer);
         encoder.beginEncoding();
-        encoder.xdrEncodeOpaque(data, data.length);
+        encoder.xdrEncodeOpaque(data, data.numBytes());
         encoder.endEncoding();
 
         XdrDecodingStream decoder = new Xdr(_buffer);
         decoder.beginDecoding();
-        byte[] decoded = decoder.xdrDecodeOpaque(data.length);
+        Opaque decoded = decoder.xdrDecodeOpaque(data.numBytes());
 
-        assertArrayEquals("encoded/decoded data do not match", data, decoded);
+        assertEquals("encoded/decoded data do not match", data, decoded);
     }
 
     @Test
@@ -291,13 +295,13 @@ public class XdrTest {
     public void testBadXdrWithOpaque() throws BadXdrOncRpcException {
         CompositeBuffer buffer = BuffersBuffer.create();
         buffer.append(allocateBuffer(10));
-        byte[] b = new byte[10];
+        Opaque b = Opaque.forBytes(new byte[10]);
         Xdr xdr = new Xdr(buffer);
         xdr.beginEncoding();
-        xdr.xdrEncodeOpaque(b, b.length);
+        xdr.xdrEncodeOpaque(b, b.numBytes());
         xdr.endEncoding();
         xdr.beginDecoding();
-        xdr.xdrDecodeOpaque(b.length +5);
+        xdr.xdrDecodeOpaque(b.numBytes() +5);
     }
 
     @Test(expected = BadXdrOncRpcException.class)

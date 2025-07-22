@@ -19,16 +19,8 @@
  */
 package org.dcache.oncrpc4j.rpc;
 
-import com.sun.security.auth.UnixNumericGroupPrincipal;
-import com.sun.security.auth.UnixNumericUserPrincipal;
-import com.sun.security.auth.module.UnixSystem;
-import org.dcache.oncrpc4j.xdr.XdrAble;
-import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
-import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Preconditions.checkState;
 
-import javax.security.auth.Subject;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.Principal;
@@ -36,12 +28,23 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkState;
+import javax.security.auth.Subject;
+
+import org.dcache.oncrpc4j.util.Opaque;
+import org.dcache.oncrpc4j.xdr.XdrAble;
+import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
+import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.sun.security.auth.UnixNumericGroupPrincipal;
+import com.sun.security.auth.UnixNumericUserPrincipal;
+import com.sun.security.auth.module.UnixSystem;
 
 public class RpcAuthTypeUnix implements RpcAuth, XdrAble {
 
     private final int _type =  RpcAuthType.UNIX;
-    private RpcAuthVerifier _verifier = new RpcAuthVerifier(RpcAuthType.NONE, new byte[0]);
+    private RpcAuthVerifier _verifier = new RpcAuthVerifier(RpcAuthType.NONE, Opaque.EMPTY_OPAQUE);
 
     private int _len;
     private int _uid;

@@ -20,7 +20,9 @@
 package org.dcache.oncrpc4j.rpc.gss;
 
 import java.io.IOException;
+
 import org.dcache.oncrpc4j.rpc.OncRpcException;
+import org.dcache.oncrpc4j.util.Opaque;
 import org.dcache.oncrpc4j.xdr.XdrAble;
 import org.dcache.oncrpc4j.xdr.XdrDecodingStream;
 import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
@@ -31,11 +33,11 @@ import org.dcache.oncrpc4j.xdr.XdrEncodingStream;
  */
 public class GSSINITres implements  XdrAble {
 
-    private byte[] _handle;
+    private Opaque _handle;
     private int _gssMajor;
     private int _gssMinor;
     private int _sequence;
-    private byte[] _token;
+    private Opaque _token;
 
     public int getGssMajor() {
         return _gssMajor;
@@ -53,11 +55,11 @@ public class GSSINITres implements  XdrAble {
         this._gssMinor = gssMinor;
     }
 
-    public byte[] getHandle() {
+    public Opaque getHandle() {
         return _handle;
     }
 
-    public void setHandle(byte[] handle) {
+    public void setHandle(Opaque handle) {
         this._handle = handle;
     }
 
@@ -69,11 +71,11 @@ public class GSSINITres implements  XdrAble {
         this._sequence = sequence;
     }
 
-    public byte[] getToken() {
+    public Opaque getToken() {
         return _token;
     }
 
-    public void setToken(byte[] token) {
+    public void setToken(Opaque token) {
         this._token = token;
     }
 

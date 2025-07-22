@@ -19,10 +19,10 @@
  */
 package org.dcache.oncrpc4j.xdr;
 
-import org.dcache.oncrpc4j.rpc.OncRpcException;
-import com.google.common.io.BaseEncoding;
 import java.io.IOException;
-import java.util.Arrays;
+
+import org.dcache.oncrpc4j.rpc.OncRpcException;
+import org.dcache.oncrpc4j.util.Opaque;
 
 /**
  * A wrapper class that makes dynamic opaque data suitable for xdr encoding.
@@ -31,12 +31,16 @@ import java.util.Arrays;
  */
 public class XdrOpaque implements XdrAble {
 
-    private byte[] _opaque;
+    private Opaque _opaque;
 
     public XdrOpaque() {
     }
 
     public XdrOpaque(byte[] opaque) {
+        this(Opaque.forMutableByteArray(opaque));
+    }
+
+    public XdrOpaque(Opaque opaque) {
         _opaque = opaque;
     }
 
@@ -44,13 +48,13 @@ public class XdrOpaque implements XdrAble {
         xdrDecode(xdr);
     }
 
-    public byte[] getOpaque() {
+    public Opaque getOpaque() {
         return _opaque;
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(_opaque);
+        return _opaque.hashCode();
     }
 
     @Override
@@ -62,14 +66,14 @@ public class XdrOpaque implements XdrAble {
             return false;
         }
 
-        return Arrays.equals(_opaque, ((XdrOpaque) o)._opaque);
+        return _opaque.equals(((XdrOpaque) o)._opaque);
     }
 
     @Override
     public String toString() {
         return  new StringBuilder()
             .append('[')
-            .append(BaseEncoding.base16().upperCase().encode(_opaque))
+            .append(_opaque.toBase64())
             .append(']')
             .toString();
     }
