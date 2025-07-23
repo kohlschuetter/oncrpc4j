@@ -11,12 +11,12 @@ import org.junit.Test;
 
 public class OpaqueTest {
     @Test
-    public void testImmutableByteBuffer() {
+    public void testOwnedByteBuffer() {
         ByteBuffer buf = ByteBuffer.allocate(64);
         buf.putInt(3, 0xAABBCCDD);
         buf.putInt(7, 0xEEFF0011);
 
-        Opaque bufOpaque = Opaque.forImmutableByteBuffer(buf, 3, 4);
+        Opaque bufOpaque = Opaque.forOwnedByteBuffer(buf, 3, 4);
         Opaque bytesOpaque = Opaque.forBytes(new byte[] {(byte) 0xAA, (byte) 0xBB, (byte) 0xCC, (byte) 0xDD});
 
         assertEquals(bufOpaque.toBase64(), bytesOpaque.toBase64());
@@ -61,7 +61,7 @@ public class OpaqueTest {
 
     @Test
     public void testToImmutable() throws Exception {
-        Opaque mutable = Opaque.forImmutableByteBuffer(ByteBuffer.wrap(new byte[] {
+        Opaque mutable = Opaque.forOwnedByteBuffer(ByteBuffer.wrap(new byte[] {
                 (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04}), 0, 4);
         Opaque mutableToImmutable = mutable.toImmutableOpaque();
         assertEquals(mutable, mutableToImmutable);

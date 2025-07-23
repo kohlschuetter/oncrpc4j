@@ -145,7 +145,7 @@ public interface Opaque {
     }
 
     /**
-     * Returns a <em>mutable</em> {@link Opaque} instance backed on the byte contents of the given {@link ByteBuffer},
+     * Returns an {@link Opaque} instance backed on the byte contents of the given {@link ByteBuffer},
      * for the given number of bytes starting from the given absolute index.
      * <p>
      * It is assumed that the given {@link ByteBuffer}'s contents are valid and unchanged for the entire lifetime of the
@@ -160,7 +160,7 @@ public interface Opaque {
      * @return The {@link Opaque} instance.
      * @see #toImmutableOpaque()
      */
-    static Opaque forImmutableByteBuffer(ByteBuffer buf, int index, int length) {
+    static Opaque forOwnedByteBuffer(ByteBuffer buf, int index, int length) {
         if (buf.order() != ByteOrder.BIG_ENDIAN) {
             buf = buf.duplicate();
         }
