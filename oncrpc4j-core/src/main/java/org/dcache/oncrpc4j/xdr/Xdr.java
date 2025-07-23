@@ -321,18 +321,11 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      * @param len number of bytes to read.
      * @throws BadXdrOncRpcException if xdr stream can't be decoded.
      */
-    void xdrDecodeOpaque(byte[] buf, int offset, int len) throws BadXdrOncRpcException {
-        if (len == 0) {
-            return;
-        }
+    private void xdrDecodeOpaque0(byte[] buf, int offset, int len) throws BadXdrOncRpcException {
         int padding = (4 - (len & 3)) & 3;
         ensureBytes(len + padding);
         _buffer.get(buf, offset, len);
         _buffer.position(_buffer.position() + padding);
-    }
-
-    void xdrDecodeOpaque(byte[] buf, int len) throws BadXdrOncRpcException {
-        xdrDecodeOpaque(buf, 0, len);
     }
 
     @Override
@@ -340,9 +333,16 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         if (len == 0) {
             return Opaque.EMPTY_OPAQUE;
         }
-        byte[] opaque = new byte[len];
-        xdrDecodeOpaque(opaque, len);
-        return Opaque.forImmutableBytes(opaque);
+
+        int padding = (4 - (len & 3)) & 3;
+        ensureBytes(len + padding);
+
+        ByteBuffer slice = _buffer.toByteBuffer().slice();
+        slice.rewind();
+        slice.limit(len);
+        _buffer.position(_buffer.position() + len + padding);
+
+        return Opaque.forOwnedByteBuffer(slice, 0, len);
     }
 
     /**
@@ -368,9 +368,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
             return Opaque.EMPTY_OPAQUE;
         }
         checkArraySize(length);
-        byte[] opaque = new byte[length];
-        xdrDecodeOpaque(opaque, 0, length);
-        return Opaque.forImmutableBytes(opaque);
+
+        return xdrDecodeOpaque(length);
     }
 
     /**
@@ -396,7 +395,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         }
         checkArraySize(len);
         byte[] bytes = new byte[len];
-        xdrDecodeOpaque(bytes, 0, len);
+        xdrDecodeOpaque0(bytes, 0, len);
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
