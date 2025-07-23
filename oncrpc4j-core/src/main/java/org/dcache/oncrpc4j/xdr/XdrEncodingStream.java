@@ -38,6 +38,8 @@ public interface XdrEncodingStream {
     void xdrEncodeIntFixedVector(int[] ints, int length);
     void xdrEncodeDynamicOpaque(Opaque opaque);
     void xdrEncodeOpaque(Opaque opaque, int expectedLength);
+    void xdrEncodeDynamicOpaqueArray(byte[] opaque);
+    void xdrEncodeOpaqueArray(byte[] opaque, int expectedLength);
     void xdrEncodeBoolean(boolean bool);
     void xdrEncodeString(String str);
     void xdrEncodeLong(long value);

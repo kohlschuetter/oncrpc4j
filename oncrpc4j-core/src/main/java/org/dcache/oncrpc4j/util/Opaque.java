@@ -145,8 +145,8 @@ public interface Opaque {
     }
 
     /**
-     * Returns an {@link Opaque} instance backed on the byte contents of the given {@link ByteBuffer},
-     * for the given number of bytes starting from the given absolute index.
+     * Returns an {@link Opaque} instance backed on the byte contents of the given {@link ByteBuffer}, for the given
+     * number of bytes starting from the given absolute index.
      * <p>
      * It is assumed that the given {@link ByteBuffer}'s contents are valid and unchanged for the entire lifetime of the
      * returned {@link Opaque}; position and limit may be changed by the returned {@link Opaque}.

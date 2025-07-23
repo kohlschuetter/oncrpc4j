@@ -346,6 +346,15 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
+     * @see #xdrDecodeOpaque(int)
+     */
+    @Deprecated
+    @Override
+    public byte[] xdrDecodeOpaqueArray(int len) throws BadXdrOncRpcException {
+        return xdrDecodeOpaque(len).toBytes();
+    }
+
+    /**
      * Decodes (aka "deserializes") a XDR opaque value, which is represented by a vector of byte values. The length of
      * the opaque value to decode is pulled off of the XDR stream, so the caller does not need to know the exact length
      * in advance. The decoded data is always padded to be a multiple of four (because that's what the sender does).
@@ -362,6 +371,15 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         byte[] opaque = new byte[length];
         xdrDecodeOpaque(opaque, 0, length);
         return Opaque.forImmutableBytes(opaque);
+    }
+
+    /**
+     * @see #xdrDecodeDynamicOpaque()
+     */
+    @Deprecated
+    @Override
+    public byte[] xdrDecodeDynamicOpaqueArray() throws BadXdrOncRpcException {
+        return xdrDecodeDynamicOpaque().toBytes();
     }
 
     /**
@@ -719,6 +737,15 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     }
 
     /**
+     * @see #xdrEncodeOpaque(Opaque, int)
+     */
+    @Override
+    @Deprecated
+    public void xdrEncodeOpaqueArray(byte[] bytes, int expectedLength) {
+        xdrEncodeOpaque(Opaque.forImmutableBytes(bytes), expectedLength);
+    }
+
+    /**
      * Encodes (aka "serializes") a XDR opaque value, which is represented by a vector of byte values. The length of the
      * opaque value is written to the XDR stream, so the receiver does not need to know the exact length in advance. The
      * encoded data is always padded to be a multiple of four to maintain XDR alignment.
@@ -729,6 +756,14 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         int numBytes = opaque.numBytes();
         xdrEncodeInt(numBytes);
         xdrEncodeOpaque0(opaque, numBytes);
+    }
+
+    /**
+     * @see #xdrEncodeDynamicOpaque(Opaque)
+     */
+    @Override
+    public void xdrEncodeDynamicOpaqueArray(byte[] bytes) {
+        xdrEncodeDynamicOpaque(Opaque.forImmutableBytes(bytes));
     }
 
     @Override

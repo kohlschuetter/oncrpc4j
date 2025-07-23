@@ -715,11 +715,11 @@ public class jrpcgen {
                     || (decl.kind == JrpcgenDeclaration.DYNAMICVECTOR)) {
                 if ("opaque".equals(decl.type)) {
                     if (decl.kind == JrpcgenDeclaration.FIXEDVECTOR) {
-                        syllable = "Opaque";
+                        syllable = "OpaqueArray";
                         encodingOpts = checkForEnumValue(decl.size);
                         decodingOpts = checkForEnumValue(decl.size);
                     } else {
-                        syllable = "DynamicOpaque";
+                        syllable = "DynamicOpaqueArray";
                         encodingOpts = null;
                         decodingOpts = null;
                     }

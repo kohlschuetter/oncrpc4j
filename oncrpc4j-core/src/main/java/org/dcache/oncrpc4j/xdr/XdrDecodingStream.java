@@ -39,6 +39,8 @@ public interface XdrDecodingStream {
     int[] xdrDecodeIntFixedVector(int len) throws BadXdrOncRpcException;
     Opaque xdrDecodeDynamicOpaque() throws BadXdrOncRpcException;
     Opaque xdrDecodeOpaque(int size) throws BadXdrOncRpcException;
+    byte[] xdrDecodeDynamicOpaqueArray() throws BadXdrOncRpcException;
+    byte[] xdrDecodeOpaqueArray(int size) throws BadXdrOncRpcException;
     boolean xdrDecodeBoolean() throws BadXdrOncRpcException;
     String xdrDecodeString() throws BadXdrOncRpcException;
     long xdrDecodeLong() throws BadXdrOncRpcException;
