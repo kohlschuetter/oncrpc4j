@@ -337,12 +337,10 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         int padding = (4 - (len & 3)) & 3;
         ensureBytes(len + padding);
 
-        ByteBuffer slice = _buffer.toByteBuffer().slice();
-        slice.rewind();
-        slice.limit(len);
-        _buffer.position(_buffer.position() + len + padding);
-
-        return Opaque.forOwnedByteBuffer(slice, 0, len);
+        int pos = _buffer.position();
+        Opaque opaque = Opaque.forOwnedBuffer(_buffer, pos, len);
+        _buffer.position(pos + len + padding);
+        return opaque;
     }
 
     /**
@@ -716,14 +714,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
         int padding = (4 - (len & 3)) & 3;
         ensureCapacity(len + padding);
 
-        if (_buffer.isComposite()) { // unlikely
-            _buffer.put(bytes.toBytes(), 0, len);
-        } else {
-            ByteBuffer buf = _buffer.toByteBuffer();
-            int pre = _buffer.position();
-            bytes.putBytes(buf);
-            _buffer.position(pre + bytes.numBytes());
-        }
+        bytes.putBytes(_buffer);
         if (padding > 0) {
             _buffer.put(paddingZeros, 0, padding);
         }

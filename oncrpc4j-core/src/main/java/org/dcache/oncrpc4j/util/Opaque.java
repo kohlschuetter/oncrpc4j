@@ -26,6 +26,8 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Objects;
 
+import org.glassfish.grizzly.Buffer;
+
 /**
  * Describes something that can be used as a key for {@link java.util.HashMap} and that can be converted to a
  * {@code byte[]} and a Base64 string representation.
@@ -164,6 +166,13 @@ public interface Opaque {
         if (buf.order() != ByteOrder.BIG_ENDIAN) {
             buf = buf.duplicate();
         }
+        return new OpaqueByteBufferImpl(buf, index, length);
+    }
+
+    static Opaque forOwnedBuffer(Buffer buf, int index, int length) {
+        if (buf.order() != ByteOrder.BIG_ENDIAN) {
+            buf = buf.duplicate();
+        }
         return new OpaqueBufferImpl(buf, index, length);
     }
 
@@ -230,6 +239,15 @@ public interface Opaque {
      * @param buf The target buffer.
      */
     default void putBytes(ByteBuffer buf) {
+        buf.put(toBytes());
+    }
+
+    /**
+     * Writes the bytes of this {@link Opaque} to the given {@link Buffer}.
+     * 
+     * @param buf The target buffer.
+     */
+    default void putBytes(Buffer buf) {
         buf.put(toBytes());
     }
 
@@ -329,6 +347,11 @@ public interface Opaque {
         }
 
         @Override
+        public void putBytes(Buffer buf) {
+            buf.put(_opaque);
+        }
+
+        @Override
         public boolean equals(Object o) {
             if (o == this) {
                 return true;
@@ -339,21 +362,17 @@ public interface Opaque {
 
             if (o instanceof OpaqueImpl) {
                 return Arrays.equals(_opaque, ((OpaqueImpl) o)._opaque);
-            } else if (o instanceof OpaqueBufferImpl) {
-                OpaqueBufferImpl other = (OpaqueBufferImpl) o;
+            } else {
+                Opaque other = (Opaque) o;
                 if (other.numBytes() != _opaque.length) {
                     return false;
                 }
-                ByteBuffer otherBuf = other.buf;
-                int otherIndex = other.index;
-                for (int i = 0, n = _opaque.length, oi = otherIndex; i < n; i++, oi++) {
-                    if (_opaque[i] != otherBuf.get(oi)) {
+                for (int i = 0, n = _opaque.length, oi = 0; i < n; i++, oi++) {
+                    if (_opaque[i] != other.byteAt(oi)) {
                         return false;
                     }
                 }
                 return true;
-            } else {
-                return Arrays.equals(_opaque, ((Opaque) o).toBytes());
             }
         }
 
@@ -428,12 +447,12 @@ public interface Opaque {
         }
     }
 
-    final class OpaqueBufferImpl implements Opaque {
+    final class OpaqueByteBufferImpl implements Opaque {
         private final ByteBuffer buf;
         private final int index;
         private final int length;
 
-        private OpaqueBufferImpl(ByteBuffer buf, int index, int length) {
+        private OpaqueByteBufferImpl(ByteBuffer buf, int index, int length) {
             this.buf = Objects.requireNonNull(buf);
             this.index = index;
             this.length = length;
@@ -501,8 +520,8 @@ public interface Opaque {
                     }
                 }
                 return true;
-            } else if (o instanceof OpaqueBufferImpl) {
-                OpaqueBufferImpl other = (OpaqueBufferImpl) o;
+            } else if (o instanceof OpaqueByteBufferImpl) {
+                OpaqueByteBufferImpl other = (OpaqueByteBufferImpl) o;
                 ByteBuffer otherBuf = other.buf;
                 int otherIndex = other.index;
                 for (int i = index, n = index + length, oi = otherIndex; i < n; i++, oi++) {
@@ -514,6 +533,127 @@ public interface Opaque {
             } else {
                 Opaque other = (Opaque) o;
                 for (int i = index, n = index + length, oi = 0; i < n; i++, oi++) {
+                    if (buf.get(i) != other.byteAt(oi)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + "[" + toBase64() + "]";
+        }
+
+        @Override
+        public byte byteAt(int position) {
+            return buf.get(index + position);
+        }
+
+        @Override
+        public long longAt(int byteOffset) {
+            return buf.getLong(index + byteOffset);
+        }
+
+        @Override
+        public int intAt(int byteOffset) {
+            return buf.getInt(index + byteOffset);
+        }
+
+        @Override
+        public byte[] bytesAt(int byteOffset, int count) {
+            byte[] out = new byte[count];
+            buf.get(index + byteOffset, out);
+            return out;
+        }
+
+        @Override
+        public void putBytes(ByteBuffer out) {
+            out.put(buf.slice(index, length));
+        }
+
+        @Override
+        public void putBytes(Buffer out) {
+            out.put(buf.slice(index, length));
+        }
+    }
+
+    final class OpaqueBufferImpl implements Opaque {
+        private final Buffer buf;
+        private final int length;
+
+        private OpaqueBufferImpl(Buffer buf, int index, int length) {
+            this.buf = Objects.requireNonNull(buf).slice(index, index + length);
+            this.length = length;
+        }
+
+        @Override
+        public byte[] toBytes() {
+            byte[] bytes = new byte[length];
+            Buffer buf2 = buf.slice(0, length);
+            buf2.get(bytes);
+            return bytes;
+        }
+
+        @Override
+        public ByteBuffer asByteBuffer(int offset, int count) {
+            if (count > length) {
+                throw new IllegalArgumentException("Not enough bytes in backing buffer: " + count + " > " + length);
+            }
+
+            return buf.slice(offset, offset + count).toByteBuffer();
+        }
+
+        @Override
+        public int numBytes() {
+            return length;
+        }
+
+        @Override
+        public String toBase64() {
+            return Base64.getEncoder().withoutPadding().encodeToString(toBytes());
+        }
+
+        @Override
+        public Opaque toImmutableOpaque() {
+            return Opaque.forBytes(toBytes());
+        }
+
+        @Override
+        public int hashCode() {
+            int result = 1;
+            for (int i = 0, n = length; i < n; i++) {
+                byte element = buf.get(i);
+                result = 31 * result + element;
+            }
+
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (!(o instanceof Opaque)) {
+                return false;
+            }
+            if (length != ((Opaque) o).numBytes()) {
+                return false;
+            }
+
+            if (o instanceof OpaqueImpl) {
+                byte[] otherBytes = ((OpaqueImpl) o)._opaque;
+                for (int i = 0, n = 0 + length, oi = 0; i < n; i++, oi++) {
+                    if (buf.get(i) != otherBytes[oi]) {
+                        return false;
+                    }
+                }
+                return true;
+            } else {
+                Opaque other = (Opaque) o;
+                for (int i = 0, n = 0 + length, oi = 0; i < n; i++, oi++) {
                     if (buf.get(i) != other.byteAt(oi)) {
                         return false;
                     }
@@ -544,14 +684,20 @@ public interface Opaque {
 
         @Override
         public byte[] bytesAt(int byteOffset, int count) {
-            byte[] out = new byte[count];
-            buf.get(byteOffset, out);
-            return out;
+            byte[] bytes = new byte[count];
+            Buffer buf2 = buf.slice(byteOffset, byteOffset + count);
+            buf2.get(bytes);
+            return bytes;
         }
 
         @Override
         public void putBytes(ByteBuffer out) {
-            out.put(out.slice(index, length));
+            out.put(buf.toByteBuffer());
+        }
+
+        @Override
+        public void putBytes(Buffer out) {
+            out.put(buf);
         }
     }
 }
