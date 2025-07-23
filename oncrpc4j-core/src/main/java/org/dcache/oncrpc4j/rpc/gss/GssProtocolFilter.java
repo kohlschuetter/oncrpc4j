@@ -117,7 +117,7 @@ public class GssProtocolFilter extends BaseFilter {
                         res.setSequence(_sequence);
                         byte[] crc = Ints.toByteArray(_sequence);
                         crc = gssContext.getMIC(crc, 0, 4, new MessageProp(false));
-                        authGss.setVerifier(new RpcAuthVerifier(authGss.type(), Opaque.forMutableByteArray(crc)));
+                        authGss.setVerifier(new RpcAuthVerifier(authGss.type(), Opaque.forImmutableBytes(crc)));
                     }
                     call.reply(res);
                     break;
@@ -135,7 +135,7 @@ public class GssProtocolFilter extends BaseFilter {
                     _log.debug("RPCGSS_SEC: {}", gssContext.getSrcName());
                     byte[] crc = Ints.toByteArray(authGss.getSequence());
                     crc = gssContext.getMIC(crc, 0, 4, new MessageProp(false));
-                    authGss.setVerifier(new RpcAuthVerifier(authGss.type(), Opaque.forMutableByteArray(crc)));
+                    authGss.setVerifier(new RpcAuthVerifier(authGss.type(), Opaque.forImmutableBytes(crc)));
                     ctx.setMessage(new RpcGssCall(call, gssContext, new MessageProp(false)));
                     hasContext = true;
             }

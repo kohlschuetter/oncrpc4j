@@ -120,7 +120,7 @@ public class RpcGssCall extends RpcCall {
 
                     byte[] checksum = _gssContext.getMIC(integBytes.toBytes(), 0, integBytes.numBytes(), _mop);
                     DataBodyIntegrity integData = new DataBodyIntegrity(integBytes, Opaque
-                            .forMutableByteArray(checksum));
+                            .forImmutableBytes(checksum));
                     super.acceptedReply(state, integData);
                     break;
                 case RpcGssService.RPC_GSS_SVC_PRIVACY:
