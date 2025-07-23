@@ -270,6 +270,23 @@ public interface Opaque {
     long longAt(int byteOffset);
 
     /**
+     * Returns the {@code int} stored at the given position, using big-endian byte order.
+     * 
+     * @param byteOffset The byte offset
+     * @return The int.
+     */
+    int intAt(int byteOffset);
+
+    /**
+     * Returns a copy of the number of bytes stored at the given position.
+     * 
+     * @param byteOffset The byte offset.
+     * @param length The number of bytes starting from that offset.
+     * @return A new byte array containing the bytes.
+     */
+    byte[] bytesAt(int byteOffset, int length);
+
+    /**
      * Returns a {@link ByteBuffer} that is backed by the bytes of a section in this {@link Opaque}.
      * 
      * @param offset The byte offset in the opaque.
@@ -368,6 +385,16 @@ public interface Opaque {
         @Override
         public long longAt(int byteOffset) {
             return Bytes.getLong(_opaque, byteOffset);
+        }
+
+        @Override
+        public int intAt(int byteOffset) {
+            return Bytes.getInt(_opaque, byteOffset);
+        }
+
+        @Override
+        public byte[] bytesAt(int byteOffset, int length) {
+            return Arrays.copyOfRange(_opaque, byteOffset, byteOffset + length);
         }
     }
 
@@ -508,6 +535,18 @@ public interface Opaque {
         @Override
         public long longAt(int byteOffset) {
             return buf.getLong(byteOffset);
+        }
+
+        @Override
+        public int intAt(int byteOffset) {
+            return buf.getInt(byteOffset);
+        }
+
+        @Override
+        public byte[] bytesAt(int byteOffset, int count) {
+            byte[] out = new byte[count];
+            buf.get(byteOffset, out);
+            return out;
         }
 
         @Override
