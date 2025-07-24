@@ -592,7 +592,7 @@ public interface Opaque {
 
         @Override
         public ByteBuffer asByteBuffer() {
-            return buf.toByteBuffer();
+            return buf.toByteBuffer().slice();
         }
 
         @Override
