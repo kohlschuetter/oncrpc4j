@@ -584,7 +584,7 @@ public interface Opaque {
         private final int length;
 
         private OpaqueBufferImpl(Buffer buf, int index, int length) {
-            this.buf = Objects.requireNonNull(buf).slice(index, index + length);
+            this.buf = Objects.requireNonNull(buf).slice(index, index + length).order(ByteOrder.BIG_ENDIAN);
             this.length = length;
         }
 
@@ -602,7 +602,10 @@ public interface Opaque {
                 throw new IllegalArgumentException("Not enough bytes in backing buffer: " + count + " > " + length);
             }
 
-            return buf.slice(offset, offset + count).toByteBuffer();
+            // Grizzly is peculiar when it comes to converting to ByteBuffers; this approach works.
+            ByteBuffer bb = buf.toByteBuffer(offset, offset + count);
+            bb = bb.slice(bb.position(), count);
+            return bb;
         }
 
         @Override
