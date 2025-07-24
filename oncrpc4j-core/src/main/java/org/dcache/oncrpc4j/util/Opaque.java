@@ -19,6 +19,7 @@
  */
 package org.dcache.oncrpc4j.util;
 
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -82,7 +83,7 @@ public interface Opaque {
      * @return The Opaque.
      */
     static Opaque forNZeroBytes(int num) {
-        return Opaque.forImmutableBytes(new byte[num]);
+        return new OpaqueZero(num);
     }
 
     /**
@@ -696,6 +697,68 @@ public interface Opaque {
         @Override
         public void putBytes(Buffer out) {
             out.put(buf);
+        }
+    }
+
+    static final class OpaqueZero implements Opaque {
+        private final int num;
+
+        private OpaqueZero(int num) {
+            this.num = num;
+        }
+
+        @Override
+        public byte[] toBytes() {
+            return new byte[num];
+        }
+
+        @Override
+        public int numBytes() {
+            return num;
+        }
+
+        @Override
+        public Opaque toImmutableOpaque() {
+            return this;
+        }
+
+        @Override
+        public byte byteAt(int byteOffset) {
+            return 0;
+        }
+
+        @Override
+        public long longAt(int byteOffset) {
+            return 0;
+        }
+
+        @Override
+        public int intAt(int byteOffset) {
+            return 0;
+        }
+
+        @Override
+        public byte[] bytesAt(int byteOffset, int length) {
+            return new byte[length];
+        }
+
+        @Override
+        public void putBytes(ByteBuffer buf) {
+            if (buf.remaining() < num) {
+                throw new BufferOverflowException();
+            }
+            buf.slice(buf.position(), num).clear();
+            buf.position(buf.position() + num);
+        }
+
+        @Override
+        public void putBytes(Buffer buf) {
+            if (buf.remaining() < num) {
+                throw new BufferOverflowException();
+            }
+            int pos = buf.position();
+            buf.slice(pos, pos + num).clear();
+            buf.position(pos + num);
         }
     }
 }
