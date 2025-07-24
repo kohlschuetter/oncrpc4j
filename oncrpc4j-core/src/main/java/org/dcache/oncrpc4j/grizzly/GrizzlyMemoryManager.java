@@ -41,7 +41,7 @@ public class GrizzlyMemoryManager {
     }
 
     public static Buffer allocate(int size) {
-        return GRIZZLY_MM.allocate(size);
+        return GRIZZLY_MM.allocateAtLeast(size);
     }
 
     public static Buffer reallocate(MemoryManager memoryManager, Buffer oldBuffer, int newSize) {
