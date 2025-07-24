@@ -21,6 +21,7 @@ package org.dcache.oncrpc4j.grizzly;
 
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.memory.Buffers;
+import org.glassfish.grizzly.memory.BuffersBuffer;
 import org.glassfish.grizzly.memory.CompositeBuffer;
 import org.glassfish.grizzly.memory.MemoryManager;
 
@@ -44,7 +45,7 @@ public class GrizzlyMemoryManager {
     }
 
     public static Buffer reallocate(MemoryManager memoryManager, Buffer oldBuffer, int newSize) {
-        if (oldBuffer.isComposite()) {
+        if (oldBuffer instanceof CompositeBuffer) {
             Buffer addon = memoryManager.allocate(newSize-oldBuffer.capacity());
             ((CompositeBuffer)oldBuffer).append(addon);
             return oldBuffer;
@@ -54,5 +55,15 @@ public class GrizzlyMemoryManager {
 
     public static Buffer wrap(byte[] bytes) {
         return Buffers.wrap(GRIZZLY_MM, bytes);
+    }
+
+    public static Buffer prepend(MemoryManager<?> memoryManager, Buffer buffer, Buffer prepend) {
+        if (buffer instanceof CompositeBuffer) {
+            Buffer buf = ((CompositeBuffer) buffer).prepend(prepend);
+            buf.position(0);
+            return buf;
+        } else {
+            return BuffersBuffer.create(memoryManager, prepend, buffer);
+        }
     }
 }

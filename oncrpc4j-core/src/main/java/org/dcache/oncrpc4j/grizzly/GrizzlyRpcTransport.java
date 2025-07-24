@@ -27,6 +27,7 @@ import org.dcache.oncrpc4j.xdr.Xdr;
 import java.net.InetSocketAddress;
 import java.nio.channels.CompletionHandler;
 import org.glassfish.grizzly.memory.BuffersBuffer;
+import org.glassfish.grizzly.memory.MemoryManager;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,12 +86,14 @@ public class GrizzlyRpcTransport implements RpcTransport {
 
         // add record marker, if needed
         if (_isStreaming) {
+            MemoryManager<?> memoryManager = _connection.getMemoryManager();
             int len = buffer.remaining() | RpcMessageParserTCP.RPC_LAST_FRAG;
-            Buffer marker = _connection.getMemoryManager().allocate(Integer.BYTES);
+            Buffer marker = memoryManager.allocate(Integer.BYTES);
             marker.order(ByteOrder.BIG_ENDIAN);
             marker.putInt(len);
             marker.flip();
-            buffer = BuffersBuffer.create(_connection.getMemoryManager(), marker, buffer);
+
+            buffer = GrizzlyMemoryManager.prepend(memoryManager, buffer, marker);
         }
 
         // pass destination address to handle UDP connections as well
