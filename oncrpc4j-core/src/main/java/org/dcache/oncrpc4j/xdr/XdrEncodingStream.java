@@ -31,6 +31,16 @@ import org.dcache.oncrpc4j.util.Opaque;
  */
 public interface XdrEncodingStream {
 
+    /**
+     * Ensure the underlying buffer has a certain capacity.
+     * 
+     * This can help reduce the number of reallocations, should encoders know in advance the
+     * expected size of the output.
+     * 
+     * @param size The expected size of bytes writting via encoding.
+     */
+    void ensureCapacity(int size);
+
     void beginEncoding();
     void endEncoding();
     void xdrEncodeInt(int value);

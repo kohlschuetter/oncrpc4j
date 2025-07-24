@@ -943,8 +943,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     public void close() {
         _buffer.tryDispose();
     }
-
-    private void ensureCapacity(int size) {
+    
+    public void ensureCapacity(int size) {
         if (_buffer.remaining() < size) {
             int oldCapacity = _buffer.capacity();
             int newCapacity = Math.max((oldCapacity * 3) / 2 + 1, oldCapacity + size);
