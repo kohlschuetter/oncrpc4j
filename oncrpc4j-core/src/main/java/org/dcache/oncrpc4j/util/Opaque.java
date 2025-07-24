@@ -305,14 +305,12 @@ public interface Opaque {
     byte[] bytesAt(int byteOffset, int length);
 
     /**
-     * Returns a {@link ByteBuffer} that is backed by the bytes of a section in this {@link Opaque}.
+     * Returns a {@link ByteBuffer} that is backed by the bytes in this {@link Opaque}.
      * 
-     * @param offset The byte offset in the opaque.
-     * @param length The number of bytes.
      * @return The ByteBuffer.
      */
-    default ByteBuffer asByteBuffer(int offset, int length) {
-        return ByteBuffer.wrap(toBytes(), offset, length);
+    default ByteBuffer asByteBuffer() {
+        return ByteBuffer.wrap(toBytes());
     }
 
     public class OpaqueImpl implements Opaque {
@@ -466,12 +464,8 @@ public interface Opaque {
         }
 
         @Override
-        public ByteBuffer asByteBuffer(int offset, int count) {
-            if (count > length) {
-                throw new IllegalArgumentException("Not enough bytes in backing buffer: " + count + " > " + length);
-            }
-
-            return buf.slice(index + offset, count);
+        public ByteBuffer asByteBuffer() {
+            return buf;
         }
 
         @Override
@@ -597,15 +591,8 @@ public interface Opaque {
         }
 
         @Override
-        public ByteBuffer asByteBuffer(int offset, int count) {
-            if (count > length) {
-                throw new IllegalArgumentException("Not enough bytes in backing buffer: " + count + " > " + length);
-            }
-
-            // Grizzly is peculiar when it comes to converting to ByteBuffers; this approach works.
-            ByteBuffer bb = buf.toByteBuffer(offset, offset + count);
-            bb = bb.slice(bb.position(), count);
-            return bb;
+        public ByteBuffer asByteBuffer() {
+            return buf.toByteBuffer();
         }
 
         @Override
