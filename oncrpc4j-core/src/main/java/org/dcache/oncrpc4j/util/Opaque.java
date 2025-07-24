@@ -28,6 +28,8 @@ import java.util.Objects;
 
 import org.glassfish.grizzly.Buffer;
 
+import com.google.common.io.BaseEncoding;
+
 /**
  * Describes something that can be used as a key for {@link java.util.HashMap} and that can be converted to a
  * {@code byte[]} and a Base64 string representation.
@@ -224,7 +226,13 @@ public interface Opaque {
      * 
      * @return A Base64 string.
      */
-    String toBase64();
+    default String toBase64() {
+        return Base64.getEncoder().withoutPadding().encodeToString(toBytes());
+    }
+
+    default String toBase16() {
+        return BaseEncoding.base16().encode(toBytes());
+    }
 
     /**
      * Returns an immutable {@link Opaque}, which may be the instance itself if it is already immutable.
@@ -381,7 +389,7 @@ public interface Opaque {
          */
         @Override
         public String toString() {
-            return super.toString() + "[" + toBase64() + "]";
+            return super.toString() + "[" + toBase16() + "]";
         }
 
         @Override
@@ -537,7 +545,7 @@ public interface Opaque {
 
         @Override
         public String toString() {
-            return super.toString() + "[" + toBase64() + "]";
+            return super.toString() + "[" + toBase16() + "]";
         }
 
         @Override
@@ -654,7 +662,7 @@ public interface Opaque {
 
         @Override
         public String toString() {
-            return super.toString() + "[" + toBase64() + "]";
+            return super.toString() + "[" + toBase16() + "]";
         }
 
         @Override
