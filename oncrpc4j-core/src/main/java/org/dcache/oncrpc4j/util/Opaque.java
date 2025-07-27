@@ -474,7 +474,7 @@ public interface Opaque {
 
         @Override
         public ByteBuffer asByteBuffer() {
-            return buf;
+            return buf.slice(index, length);
         }
 
         @Override
