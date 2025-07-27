@@ -138,6 +138,8 @@ public class OncRpcSvc {
      */
     private final Consumer<RpcCall> _callInterceptor;
 
+    private final TransportFilter _transportFilter;
+
     /**
      * Create new RPC service with defined configuration.
      * @param builder to build this service
@@ -156,6 +158,8 @@ public class OncRpcSvc {
         ThreadPoolConfig selectorPoolConfig = getSelectorPoolCfg(ioStrategy,
                 serviceName,
                 builder.getSelectorThreadPoolSize());
+
+        _transportFilter = builder._transportFilter == null ? new TransportFilter() : builder._transportFilter;
 
         if ((protocol & IpProtocolType.TCP) != 0) {
             final TCPNIOTransport tcpTransport = TCPNIOTransportBuilder
@@ -330,9 +334,8 @@ public class OncRpcSvc {
         }
 
         for (Transport t : _transports) {
-
             FilterChainBuilder filterChain = FilterChainBuilder.stateless();
-            filterChain.add(new TransportFilter());
+            filterChain.add(_transportFilter);
             if (_sslContextProvider != null) {
 
                 SSLContextConfigurator sslContextConfigurator = GrizzlyUtils.asContextConfigurator(_sslContextProvider);

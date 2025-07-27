@@ -33,6 +33,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
+
+import org.glassfish.grizzly.filterchain.TransportFilter;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -88,6 +90,7 @@ public class OncRpcSvcBuilder {
     private SSLParameters _sslParams;
     private MemoryAllocator _allocator = MemoryAllocator.DEFAULT;
     private boolean _tcpNoDelay = TCPNIOTransport.DEFAULT_TCP_NO_DELAY;
+    TransportFilter _transportFilter;
 
     private Consumer<RpcCall> _callInterceptor = c -> {};
 
@@ -252,6 +255,11 @@ public class OncRpcSvcBuilder {
 
     public OncRpcSvcBuilder withSSLContextProvider(Callable<SSLContext> sslContextProvider) {
         _sslContextProvider = sslContextProvider;
+        return this;
+    }
+
+    public OncRpcSvcBuilder withTransportFilter(TransportFilter transportFilter) {
+        _transportFilter = transportFilter;
         return this;
     }
 
