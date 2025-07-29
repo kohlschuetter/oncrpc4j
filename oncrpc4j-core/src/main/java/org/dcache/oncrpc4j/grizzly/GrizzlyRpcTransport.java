@@ -46,6 +46,9 @@ import org.dcache.oncrpc4j.rpc.RpcTransport;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 public class GrizzlyRpcTransport implements RpcTransport {
 
     private final Connection<InetSocketAddress> _connection;
@@ -82,19 +85,7 @@ public class GrizzlyRpcTransport implements RpcTransport {
     public <A> void send(final Xdr xdr, A attachment, CompletionHandler<Integer, ? super A> handler) {
 
         requireNonNull(handler, "CompletionHandler can't be null");
-        Buffer buffer = xdr.asBuffer();
-
-        // add record marker, if needed
-        if (_isStreaming) {
-            MemoryManager<?> memoryManager = _connection.getMemoryManager();
-            int len = buffer.remaining() | RpcMessageParserTCP.RPC_LAST_FRAG;
-            Buffer marker = memoryManager.allocate(Integer.BYTES);
-            marker.order(ByteOrder.BIG_ENDIAN);
-            marker.putInt(len);
-            marker.flip();
-
-            buffer = GrizzlyMemoryManager.prepend(memoryManager, buffer, marker);
-        }
+        WritableMessage buffer = xdr.toWritableMessage(_connection, _isStreaming);
 
         // pass destination address to handle UDP connections as well
         _connection.write(_remoteAddress, buffer,
@@ -102,14 +93,29 @@ public class GrizzlyRpcTransport implements RpcTransport {
 
                     @Override
                     public void failed(Throwable throwable) {
+                        if (buffer instanceof Closeable) {
+                            try {
+                                ((Closeable) buffer).close();
+                            } catch (IOException e) {
+                                throwable.addSuppressed(e);
+                            }
+                        }
+
                         handler.failed(throwable, attachment);
                     }
 
                     @Override
                     public void completed(WriteResult<WritableMessage, InetSocketAddress> result) {
-                        handler.completed((int)result.getWrittenSize(), attachment);
+                        handler.completed((int) result.getWrittenSize(), attachment);
+                        if (buffer instanceof Closeable) {
+                            try {
+                                ((Closeable) buffer).close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
+                        }
                     }
-        });
+                });
     }
 
     @Override

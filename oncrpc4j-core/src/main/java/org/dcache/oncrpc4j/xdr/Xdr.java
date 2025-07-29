@@ -21,15 +21,23 @@ package org.dcache.oncrpc4j.xdr;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.dcache.oncrpc4j.grizzly.GrizzlyMemoryManager;
+import org.dcache.oncrpc4j.rpc.RpcMessageParserTCP;
 import org.dcache.oncrpc4j.util.Opaque;
 import org.glassfish.grizzly.Buffer;
+import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.FileChunk;
+import org.glassfish.grizzly.asyncqueue.WritableMessage;
 import org.glassfish.grizzly.memory.BuffersBuffer;
 import org.glassfish.grizzly.memory.ByteBufferWrapper;
+import org.glassfish.grizzly.memory.CompositeBuffer;
 import org.glassfish.grizzly.memory.MemoryManager;
 
 public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable {
@@ -60,6 +68,8 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      * Memory manager used to allocate, resize buffers.
      */
     private final MemoryManager _memoryManager;
+
+    private final List<WritableMessage> messageChunks = new ArrayList<>();
 
     /**
      * Create a new Xdr object with a buffer of given size.
@@ -543,8 +553,44 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
      *
      * @return The {@link Buffer} that backs this xdr
      */
+    @Deprecated
     public Buffer asBuffer() {
+        if (!messageChunks.isEmpty()) {
+            throw new IllegalStateException("Use toWritableMessage()");
+        }
         return _buffer;
+    }
+
+    public WritableMessage toWritableMessage(Connection<InetSocketAddress> connection, boolean streaming) {
+        if (!messageChunks.isEmpty()) {
+            List<WritableMessage> list = new ArrayList<>(messageChunks.size() + 1);
+            list.addAll(messageChunks);
+            if (_buffer.remaining() > 0) {
+                list.add(_buffer);
+            }
+            return new ChunkedWritableMessage(connection, list, streaming);
+        }
+
+        if (streaming) {
+            // add record marker, if needed
+            int len = _buffer.remaining() | RpcMessageParserTCP.RPC_LAST_FRAG;
+            Buffer marker = _memoryManager.allocate(Integer.BYTES);
+            marker.order(ByteOrder.BIG_ENDIAN);
+            marker.putInt(len);
+            marker.flip();
+
+            return GrizzlyMemoryManager.prepend(_memoryManager, _buffer, marker);
+        }
+
+        return _buffer;
+    }
+
+    public static Buffer appendBuffer(MemoryManager<?> memoryManager, Buffer buffer, Buffer special) {
+        if (buffer instanceof CompositeBuffer) {
+            return ((CompositeBuffer) buffer).append(special);
+        } else {
+            return BuffersBuffer.create(memoryManager, buffer, special);
+        }
     }
 
     /**
@@ -745,7 +791,20 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     public void xdrEncodeDynamicOpaque(Opaque opaque) {
         int numBytes = opaque.numBytes();
         xdrEncodeInt(numBytes);
-        xdrEncodeOpaque0(opaque, numBytes);
+
+        if (opaque instanceof FileChunkSupplier) {
+            _buffer.flip();
+            if (_buffer.remaining() > 0) {
+                messageChunks.add(_buffer);
+            }
+
+            FileChunk chunk = ((FileChunkSupplier) opaque).toFileChunk(true);
+            messageChunks.add(chunk);
+
+            _buffer = GrizzlyMemoryManager.allocate(_buffer.capacity());
+        } else {
+            xdrEncodeOpaque0(opaque, numBytes);
+        }
     }
 
     /**
@@ -943,7 +1002,7 @@ public class Xdr implements XdrDecodingStream, XdrEncodingStream, AutoCloseable 
     public void close() {
         _buffer.tryDispose();
     }
-    
+
     public void ensureCapacity(int size) {
         if (_buffer.remaining() < size) {
             int oldCapacity = _buffer.capacity();
